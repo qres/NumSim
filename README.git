@@ -1,0 +1,36 @@
+# Einzelne Datei hinzufügen
+git add Filename
+
+# Alles hinzufügen (rekursiv ab aktuellem Verzeichnis)
+git add .
+
+# Aktualisieren
+git commit -m "Commit Message"
+
+# Alle Veränderung an bereits getrackten Dateien commiten
+git commit -am "Commit Message"
+
+# Tag erstellen
+git tag Tagname
+
+# Was gibts
+git branch -v
+
+# Branch erstellen
+git branch "Name"
+
+# Branches zusammenführen
+git merge $BranchToBeMergedWithCurrentBranch
+
+# version laden
+git checkout master
+git checkout tags/Tagname
+
+# Hochladen
+git push origin $branch
+
+#Runterladen
+git clone https://ipvs.informatik.uni-stuttgart.de/git/NumSimReference
+
+# Archiv erstellen
+git archive --format zip --output "name.zip" $branch
