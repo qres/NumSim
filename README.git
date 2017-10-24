@@ -4,7 +4,10 @@
 (") (")  (") (")  (") (")  (") (")  (") (")
 
 
-
+# Setup
+```shell
+sudo apt-get install libsdl2-dev
+```
 
 
 
