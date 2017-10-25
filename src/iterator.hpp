@@ -19,6 +19,17 @@
 //------------------------------------------------------------------------------
 #ifndef __ITERATOR_HPP
 #define __ITERATOR_HPP
+
+namespace Boundary {
+    enum Boundary : index_t {
+        Bottom = 0,
+        Left = 1,
+        Right = 2,
+        Top = 3,
+        _MaxBoundary
+    };
+}
+
 //------------------------------------------------------------------------------
 /** Iterator base class
 */
@@ -62,7 +73,7 @@ public:
 
 protected:
   const Geometry *_geom;
-  index_t _value;
+  index_t _value; ///< current value of the iterator
   bool _valid;
 };
 
