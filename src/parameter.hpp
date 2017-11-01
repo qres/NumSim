@@ -31,12 +31,15 @@ public:
 
   /// Getter functions for all parameters
   const real_t &Re() const;
+  /// for SOR solver
   const real_t &Omega() const;
   const real_t &Alpha() const;
   const real_t &Dt() const;
   const real_t &Tend() const;
   const index_t &IterMax() const;
+  /// Epsilon limit for poisson solver residual
   const real_t &Eps() const;
+  /// time scaling for the time steps to fullfill stability conditions
   const real_t &Tau() const;
 
 private:

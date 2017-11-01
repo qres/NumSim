@@ -47,11 +47,11 @@ public:
   /// Returns the meshwidth
   const multi_real_t &Mesh() const;
 
-  /// Updates the velocity field u
+  /// Updates the velocity field u boundaries
   void Update_U(Grid *u) const;
-  /// Updates the velocity field v
+  /// Updates the velocity field v boundaries
   void Update_V(Grid *v) const;
-  /// Updates the pressure field p
+  /// Updates the pressure field p boundaries
   void Update_P(Grid *p) const;
 
 private:

@@ -83,11 +83,11 @@ private:
   const Geometry *_geom;
   const Parameter *_param;
 
-  /// Compute the new velocites u,v
+  /// Compute the new velocites u,v from F,G
   void NewVelocities(const real_t &dt);
   /// Compute the temporary velocites F,G
   void MomentumEqu(const real_t &dt);
-  /// Compute the RHS of the poisson equation
+  /// Compute the RHS of the poisson equation frŕom F,G
   void RHS(const real_t &dt);
 };
 //------------------------------------------------------------------------------
