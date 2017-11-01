@@ -31,7 +31,8 @@ public:
 
   /// Getter functions for all parameters
   const real_t &Re() const;
-  /// for SOR solver
+  /// for SOR solver.
+  /// optimal value for hx = hy: 2/(1+sin(pi*h))
   const real_t &Omega() const;
   const real_t &Alpha() const;
   const real_t &Dt() const;
