@@ -15,8 +15,8 @@ Geometry::Geometry() :
     _size(128, 128),
     _length(1.0, 1.0),
     _h(1.0/(128 + 1), 1.0/(128 + 1)),
-    // initial values
-    _velocity(0.0, 0.0),
+    // velocity at upper boundary
+    _velocity(1.0, 0.0),
     _pressure(0.1)  {
     
 }
@@ -93,7 +93,7 @@ void Geometry::Update_V(Grid *v) const {
     it.SetBoundary(Boundary::Top);
     for(it.First(); it.Valid(); it.Next()) {
         // velocity given
-        v->Cell(it) = 0.0; // TODO what happens with this point?
+        v->Cell(it) = this->_velocity[1]; // TODO what happens with this point?
         v->Cell(it.Down()) = this->_velocity[1];
     }
 }

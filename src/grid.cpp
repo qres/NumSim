@@ -58,8 +58,8 @@ const real_t &Grid::Cell(const Iterator &it) const {
 
 /// Interpolate the value at a arbitrary position
 real_t Grid::Interpolate(const multi_real_t &pos) const {
-    real_t x = pos[0] - this->_offset[0];
-    real_t y = pos[1] - this->_offset[1];
+    real_t x = pos[0] + this->_offset[0];
+    real_t y = pos[1] + this->_offset[1];
     multi_real_t h = this->_geom->Mesh();
 
     multi_index_t size = this->_geom->Size();
@@ -103,7 +103,7 @@ real_t Grid::dx_r(const Iterator &it) const {
     real_t f_i   = this->Cell(it);
     real_t f_ip1 = this->Cell(it.Right());
     real_t h = this->_geom->Mesh()[0];
-    return (f_i - f_ip1) / h;
+    return (f_ip1 - f_i) / h;
 }
 
 /// Computes the left-sided difference quatient in y-dim at [it]
@@ -119,7 +119,7 @@ real_t Grid::dy_r(const Iterator &it) const {
     real_t f_j   = this->Cell(it);
     real_t f_jp1 = this->Cell(it.Top());
     real_t h = this->_geom->Mesh()[1];
-    return (f_j - f_jp1) / h;
+    return (f_jp1 - f_j) / h;
 }
 
 /// Computes the central difference quatient of 2nd order in x-dim at [it]
@@ -128,7 +128,7 @@ real_t Grid::dxx(const Iterator &it) const {
     real_t f_im1 = this->Cell(it.Left());
     real_t f_ip1 = this->Cell(it.Right());
     real_t h = this->_geom->Mesh()[0];
-    return (f_im1 - 2 * f_i + f_im1) / (h*h);
+    return (f_im1 - 2 * f_i + f_ip1) / (h*h);
 }
 
 /// Computes the central difference quatient of 2nd order in y-dim at [it]
@@ -137,7 +137,7 @@ real_t Grid::dyy(const Iterator &it) const {
     real_t f_jm1 = this->Cell(it.Down());
     real_t f_jp1 = this->Cell(it.Top());
     real_t h = this->_geom->Mesh()[1];
-    return (f_jm1 - 2 * f_j + f_jm1) / (h*h);
+    return (f_jm1 - 2 * f_j + f_jp1) / (h*h);
 }
 
 
@@ -195,7 +195,7 @@ real_t Grid::AbsMax() const {
     multi_index_t N = this->_geom->Size();
     // add boundary
     size_t size = (N[0] + 2) * (N[1] + 2); // TODO duplicate
-    return *std::max_element(this->_data, this->_data + size, [=](real_t i, real_t j){return max(abs(i), abs(j));});
+    return abs(*std::max_element(this->_data, this->_data + size, [=](real_t i, real_t j){return abs(i) < abs(j);}));
 }
 
 
