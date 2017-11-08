@@ -154,8 +154,8 @@ const Grid *Compute::GetVelocity() {
     Iterator it = Iterator(this->_geom);
 
     for (it.First(); it.Valid(); it.Next()) {
-        real_t u = this->_u->Cell(it);
-        real_t v = this->_v->Cell(it);
+        real_t u = (this->_u->Cell(it) + this->_u->Cell(it.Left())) / 2.0;
+        real_t v = (this->_v->Cell(it) + this->_v->Cell(it.Down())) / 2.0;
 		_tmp->Cell(it) = sqrt(u*u + v*v);
 	}
 
