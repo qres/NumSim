@@ -183,28 +183,18 @@ void Compute::MomentumEqu(const real_t &dt) {
     real_t gy = 0.0;
 
     for (it.First(); it.Valid(); it.Next()) {
-        // TODO donor cell scheme
-        real_t v_ip12_j   = (_v->Cell(it) + _v->Cell(it.Right())) / 2.0;
-        real_t v_ip12_jm1 = (_v->Cell(it.Down()) + _v->Cell(it.Down().Right())) / 2.0;
-        real_t u_i_jp12 = (_u->Cell(it) + _u->Cell(it.Top())) / 2.0;
-        real_t u_i_jm12 = (_u->Cell(it) + _u->Cell(it.Down())) / 2.0;
-        
         real_t laplace_u = _u->dxx(it) + _u->dyy(it);
-        real_t ududx = _u->DC_udu_x(it, alpha);
-        real_t duvdy = 1/h[1] * (v_ip12_j * u_i_jp12 + v_ip12_jm1 * u_i_jm12);
+        real_t duudx = _u->DC_duu_dx(it, alpha);
+        real_t duvdy = _u->DC_duv_dy(it, alpha, _v);
 
-        real_t A_ij = Re_inv * laplace_u - 2 * ududx - duvdy + gx;
+        real_t A_ij = Re_inv * laplace_u - duudx - duvdy + gx;
         this->_F->Cell(it) = this->_u->Cell(it) + dt * A_ij;
 
-        // TODO donor cell scheme
-        real_t u_im1_jp12 = (_u->Cell(it.Left()) + _u->Cell(it.Left().Top())) / 2.0;
-        real_t v_im12_j = (_v->Cell(it) + _u->Cell(it.Left())) / 2.0;
-
         real_t laplace_v = _v->dxx(it) + _v->dyy(it);
-        real_t vdvdy = _v->DC_vdv_y(it, alpha);
-        real_t duvdx = 1/h[0] * (u_i_jp12 * v_ip12_j - u_im1_jp12 * v_im12_j);
+        real_t dvvdy = _v->DC_dvv_dy(it, alpha);
+        real_t duvdx = _v->DC_duv_dx(it, alpha, _u);
 
-        real_t B_ij = Re_inv * laplace_v - duvdx - 2 * vdvdy + gy;
+        real_t B_ij = Re_inv * laplace_v - duvdx - dvvdy + gy;
         this->_G->Cell(it) = this->_v->Cell(it) + dt * B_ij;
     }
 }

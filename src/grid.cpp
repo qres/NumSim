@@ -141,36 +141,104 @@ real_t Grid::dyy(const Iterator &it) const {
 }
 
 
-/// Computes u*du/dx with the donor cell method
-real_t Grid::DC_udu_x(const Iterator &it, const real_t &alpha) const {
+/// Computes d(u^2)/dx with the donor cell method
+real_t Grid::DC_duu_dx(const Iterator &it, const real_t &alpha) const {
     // TODO DC
-    real_t u    = this->Cell(it);
-    real_t dudx = this->dx_l(it);
-    return u*dudx; 
+    real_t h = this->_geom->Mesh()[0];
+    real_t u_i   = this->Cell(it);
+    real_t u_im1 = this->Cell(it.Left());
+    real_t u_ip1 = this->Cell(it.Right());
+    real_t u_ip12 = (u_i + u_ip1)/2.0;
+    real_t u_im12 = (u_i + u_im1)/2.0;
+
+    //return 1.0/h * (u_ip12*u_ip12 - u_im12*u_im12);
+
+    return 1.0/h * (
+        ((u_ip12 > 0) ? (u_ip12*u_i)   : (u_ip12*u_ip1)) -
+        ((u_im12 > 0) ? (u_im12*u_im1) : (u_im12*u_i))
+    );
 }
 
-/// Computes v*du/dy with the donor cell method
-real_t Grid::DC_vdu_y(const Iterator &it, const real_t &alpha, const Grid *v_grid) const {
+/// Computes d(uv)/dy with the donor cell method
+real_t Grid::DC_duv_dy(const Iterator &it, const real_t &alpha, const Grid *v_grid) const {
     // TODO DC
-    real_t v    = v_grid->Cell(it);
-    real_t dudy = this->dy_l(it);
-    return v*dudy;
+    real_t h = this->_geom->Mesh()[1];
+    real_t u      = this->Cell(it);
+    real_t u_jm1  = this->Cell(it.Down());
+    real_t u_jp1  = this->Cell(it.Top());
+    real_t u_jp12 = (u + u_jp1)/2.0;
+    real_t u_jm12 = (u + u_jm1)/2.0;
+    real_t v         = v_grid->Cell(it);
+    real_t v_ip1     = v_grid->Cell(it.Right());
+    real_t v_jm1     = v_grid->Cell(it.Down());
+    real_t v_ip1jm1  = v_grid->Cell(it.Right().Down());
+    real_t v_ip12    = (v + v_ip1)/2.0;
+    real_t v_ip12jm1 = (v_jm1 + v_ip1jm1)/2.0;
+
+    //return 1.0 / h * (v_ip12*u_jp12 - v_ip12jm1*u_jm12);
+    real_t a;
+    real_t b;
+    if (v_ip12 > 0) {
+        a = v_ip12*u;
+    } else {
+        a = v_ip12*u_jp1;
+    }
+    if (v_ip12jm1 > 0) {
+        b = v_ip12jm1*u_jm1;
+    } else {
+        b = v_ip12jm1*u;
+    }
+    return 1.0 / h * (a - b);
 }
 
-/// Computes u*dv/dx with the donor cell method
-real_t Grid::DC_udv_x(const Iterator &it, const real_t &alpha, const Grid *u_grid) const {
+/// Computes d(uv)/dx with the donor cell method
+real_t Grid::DC_duv_dx(const Iterator &it, const real_t &alpha, const Grid *u_grid) const {
     // TODO DC
-    real_t u    = u_grid->Cell(it);
-    real_t dvdx = this->dx_l(it);
-    return u*dvdx;
+    real_t h = this->_geom->Mesh()[0];
+    real_t u         = u_grid->Cell(it);
+    real_t u_jp1     = u_grid->Cell(it.Top());
+    real_t u_im1     = u_grid->Cell(it.Left());
+    real_t u_im1jp1  = u_grid->Cell(it.Left().Top());
+    real_t u_im1jp12 = (u_im1 + u_im1jp1)/2.0;
+    real_t u_jp12    = (u + u_jp1)/2.0;
+    real_t v      = this->Cell(it);
+    real_t v_ip1  = this->Cell(it.Right());
+    real_t v_im1  = this->Cell(it.Left());
+    real_t v_im12 = (v + v_im1)/2.0;
+    real_t v_ip12 = (v + v_ip1)/2.0;
+
+    //return 1.0 / h * (v_ip12*u_jp12 - v_im12*u_im1jp12);
+    real_t a;
+    real_t b;
+    if (u_jp12 > 0) {
+        a = u_jp12 * v;
+    } else {
+        a = u_jp12 * v_ip1;
+    }
+    if (u_im1jp12 > 0) {
+        b = u_im1jp12 * v_im1;
+    } else {
+        b = u_im1jp12 * v;
+    }
+    return 1.0 / h * (a - b);
 }
 
-/// Computes v*dv/dy with the donor cell method
-real_t Grid::DC_vdv_y(const Iterator &it, const real_t &alpha) const {
+/// Computes d(v^2)/dy with the donor cell method
+real_t Grid::DC_dvv_dy(const Iterator &it, const real_t &alpha) const {
     // TODO DC
-    real_t v    = this->Cell(it);
-    real_t dvdx = this->dy_l(it);
-    return v*dvdx; 
+    real_t h = this->_geom->Mesh()[1];
+    real_t v_j   = this->Cell(it);
+    real_t v_jm1 = this->Cell(it.Down());
+    real_t v_jp1 = this->Cell(it.Top());
+    real_t v_jp12 = (v_j + v_jp1)/2.0;
+    real_t v_jm12 = (v_j + v_jm1)/2.0;
+
+    //return 1.0/h * (v_jp12*v_jp12 - v_jm12*v_jm12);
+
+    return 1.0/h * (
+        ((v_jp12 > 0) ? (v_jp12*v_j)   : (v_jp12*v_jp1)) -
+        ((v_jm12 > 0) ? (v_jm12*v_jm1) : (v_jm12*v_j))
+    );
 }
 
 
