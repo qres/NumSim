@@ -134,7 +134,7 @@ void InteriorIterator::Next() {
     if (ix == size[0] + 1) {
         // skip boundary
         this->_value += 2;
-        if (jy == size[1]) {
+        if (this->_value > size[0] + size[1] * stride_y) {
             // we are at the last cell
             this->_valid = false;
         }
@@ -163,16 +163,16 @@ void BoundaryIterator::First() {
 
     switch (this->_boundary) {
     case Boundary::Bottom:
-        this->_value = 1;
+        this->_value = 0;
         break;
     case Boundary::Left:
-        this->_value = stride_y;
+        this->_value = 0;
         break;
     case Boundary::Right:
-        this->_value = 2*stride_y - 1;
+        this->_value = stride_y - 1;
         break;
     case Boundary::Top:
-        this->_value = 1 + (size[1] + 1)*stride_y;
+        this->_value = (size[1] + 1) * stride_y;
         break;
     default:
         throw std::runtime_error("Unreachable");
@@ -186,28 +186,28 @@ void BoundaryIterator::Next() {
 
     switch (this->_boundary) {
     case Boundary::Bottom:
-        if (this->_value < size[0]) {
+        if (this->_value < size[0] + 1) {
             this->_value += 1;
         } else {
             this->_valid = false;
         }
         break;
     case Boundary::Left:
-        if (this->_value < size[1] * stride_y) {
+        if (this->_value < (size[1] + 1) * stride_y) {
             this->_value += stride_y;
         } else {
             this->_valid = false;
         }
         break;
     case Boundary::Right:
-        if (this->_value < size[0] + 1 + size[1] * stride_y) {
+        if (this->_value < size[0] + 1 + (size[1] + 1) * stride_y) {
             this->_value += stride_y;
         } else {
             this->_valid = false;
         }
         break;
     case Boundary::Top:
-        if (this->_value < size[0] + (size[1] + 1) * stride_y) {
+        if (this->_value < size[0] + 1 + (size[1] + 1) * stride_y) {
             this->_value += 1;
         } else {
             this->_valid = false;
