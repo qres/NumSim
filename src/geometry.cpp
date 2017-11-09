@@ -58,13 +58,14 @@ void Geometry::Update_U(Grid *u) const {
     it.SetBoundary(Boundary::Right);
     for(it.First(); it.Valid(); it.Next()) {
         // no slip, staggered grid => set left (= boundary) point to zero
-        u->Cell(it) = -u->Cell(it.Left());
+        u->Cell(it) = 0.0;
+        u->Cell(it.Left()) = 0.0;
     }
 
     it.SetBoundary(Boundary::Top);
     for(it.First(); it.Valid(); it.Next()) {
         // velocity given
-        u->Cell(it) = this->_velocity[0];
+        u->Cell(it) = 2* this->_velocity[0] - u->Cell(it.Down());
     }
 }
 
@@ -86,13 +87,14 @@ void Geometry::Update_V(Grid *v) const {
     it.SetBoundary(Boundary::Right);
     for(it.First(); it.Valid(); it.Next()) {
         // no slip => define boundary s.t. the interpolated value is zero
-        v->Cell(it) = 0.0;
+        v->Cell(it) = - v->Cell(it.Left());
     }
 
     it.SetBoundary(Boundary::Top);
     for(it.First(); it.Valid(); it.Next()) {
         // velocity given
-        v->Cell(it) = 2.0 * this->_velocity[1] - v->Cell(it.Down());
+        v->Cell(it) = this->_velocity[1];
+        v->Cell(it.Down()) = this->_velocity[1];
     }
 }
 
@@ -121,5 +123,6 @@ void Geometry::Update_P(Grid *p) const {
     for(it.First(); it.Valid(); it.Next()) {
         // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
         p->Cell(it) = p->Cell(it.Down());
+
     }
 }
