@@ -58,8 +58,8 @@ const real_t &Grid::Cell(const Iterator &it) const {
 
 /// Interpolate the value at a arbitrary position
 real_t Grid::Interpolate(const multi_real_t &pos) const {
-    real_t x = pos[0] + this->_offset[0];
-    real_t y = pos[1] + this->_offset[1];
+    real_t x = std::max(pos[0] - this->_offset[0], 0.0);
+    real_t y = std::max(pos[1] - this->_offset[1], 0.0);
     multi_real_t h = this->_geom->Mesh();
 
     multi_index_t size = this->_geom->Size();
