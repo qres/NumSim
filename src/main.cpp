@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 #endif // USE_DEBUG_VISU
 
   // Create a VTK generator
-  VTK vtk(geom.Mesh(), geom.Size());
+  VTK vtk(geom.Mesh(), geom.Length());
 
   const Grid *visugrid;
   bool run = true;
