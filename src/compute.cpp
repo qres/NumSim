@@ -26,17 +26,17 @@ Compute::Compute(const Geometry *geom, const Parameter *param) {
         |         |                       |         |
         |    p    u                       |    p    u
         |         |                       |         |
-        +---------+--                   --+---------+
+        +---------+--   --boundary--    --+---------+
         |         |                       |         |
-
-
+                boundary              boundary
+                  |                       |
 
         Origins for grids:               Lower Right:
 
-        | boundary| inner points          |         |
-        +----v----+--                   --+----v----+
+        |         | inner points          |         |
+        +----v----+--    --boundary--   --+----v----+
         |         |                       |         |
-        |    p    u boundary              |    p    u
+        |    p    u                       |    p    u
         |         |                       |         |
         +---------+--                   --+---------+
         \___global position (0,0)
