@@ -210,16 +210,14 @@ void Compute::MomentumEqu(const real_t &dt) {
 /// Compute the new velocites u,v
 void Compute::NewVelocities(const real_t &dt) {
     InteriorIterator it = InteriorIterator(this->_geom);
-    
-    multi_real_t h = this->_geom->Mesh();
-    
+
     for (it.First(); it.Valid(); it.Next()) {
         // u_m+1 = F_n - dt dpdx_n+1
-        real_t dpdx = this->_p->dx_l(it);
+        real_t dpdx = this->_p->dx_r(it); // expect right right
         real_t F    = this->_F->Cell(it);
         this->_u->Cell(it) = F - dt * dpdx;
-        
-        real_t dpdy = this->_p->dy_l(it);
+
+        real_t dpdy = this->_p->dy_r(it);
         real_t G    = this->_G->Cell(it);
         this->_v->Cell(it) = G - dt * dpdy;
     }
@@ -227,19 +225,17 @@ void Compute::NewVelocities(const real_t &dt) {
 
 /// Compute the RHS of the poisson equation
 void Compute::RHS(const real_t &dt) {
-    InteriorIterator it = InteriorIterator(this->_geom);
+    BoundaryIterator it_b = BoundaryIterator(this->_geom);
+    for (it_b.First(); it_b.Valid(); it_b.Next()) {
+        this->_F->Cell(it_b) = this->_u->Cell(it_b);
+        this->_G->Cell(it_b) = this->_v->Cell(it_b);
+    }
 
-    multi_real_t h = this->_geom->Mesh();
-
+    InteriorIterator it (this->_geom);
     for (it.First(); it.Valid(); it.Next()) {
-        real_t F_i   = this->_F->Cell(it);
-        real_t F_im1 = this->_F->Cell(it.Left());
-        real_t G_j   = this->_G->Cell(it);
-        real_t G_jm1 = this->_G->Cell(it.Down());
-        
-        this->_rhs->Cell(it) = 1.0/dt * (
-            (F_i - F_im1) / h[0] + 
-            (G_j - G_jm1) / h[1]
+        this->_rhs->Cell(it) = 1.0/dt *(
+            this->_F->dx_l(it) + // expect left left
+            this->_G->dy_l(it)
         );
     }
 }
