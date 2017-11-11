@@ -143,7 +143,6 @@ real_t Grid::dyy(const Iterator &it) const {
 
 /// Computes d(u^2)/dx with the donor cell method
 real_t Grid::DC_duu_dx(const Iterator &it, const real_t &alpha) const {
-    // TODO DC
     real_t h = this->_geom->Mesh()[0];
     real_t u_i   = this->Cell(it);
     real_t u_im1 = this->Cell(it.Left());
@@ -151,17 +150,18 @@ real_t Grid::DC_duu_dx(const Iterator &it, const real_t &alpha) const {
     real_t u_ip12 = (u_i + u_ip1)/2.0;
     real_t u_im12 = (u_i + u_im1)/2.0;
 
-    //return 1.0/h * (u_ip12*u_ip12 - u_im12*u_im12);
+    real_t central = 1.0/h * (u_ip12*u_ip12 - u_im12*u_im12);
 
-    return 1.0/h * (
+    real_t donor_cell = 1.0/h * (
         ((u_ip12 > 0) ? (u_ip12*u_i)   : (u_ip12*u_ip1)) -
         ((u_im12 > 0) ? (u_im12*u_im1) : (u_im12*u_i))
     );
+
+    return (1 - alpha) * central + alpha * donor_cell;
 }
 
 /// Computes d(uv)/dy with the donor cell method
 real_t Grid::DC_duv_dy(const Iterator &it, const real_t &alpha, const Grid *v_grid) const {
-    // TODO DC
     real_t h = this->_geom->Mesh()[1];
     real_t u      = this->Cell(it);
     real_t u_jm1  = this->Cell(it.Down());
@@ -175,7 +175,8 @@ real_t Grid::DC_duv_dy(const Iterator &it, const real_t &alpha, const Grid *v_gr
     real_t v_ip12    = (v + v_ip1)/2.0;
     real_t v_ip12jm1 = (v_jm1 + v_ip1jm1)/2.0;
 
-    //return 1.0 / h * (v_ip12*u_jp12 - v_ip12jm1*u_jm12);
+    real_t central = 1.0 / h * (v_ip12*u_jp12 - v_ip12jm1*u_jm12);
+
     real_t a;
     real_t b;
     if (v_ip12 > 0) {
@@ -188,12 +189,13 @@ real_t Grid::DC_duv_dy(const Iterator &it, const real_t &alpha, const Grid *v_gr
     } else {
         b = v_ip12jm1*u;
     }
-    return 1.0 / h * (a - b);
+    real_t donor_cell = 1.0 / h * (a - b);
+
+    return (1 - alpha) * central + alpha * donor_cell;
 }
 
 /// Computes d(uv)/dx with the donor cell method
 real_t Grid::DC_duv_dx(const Iterator &it, const real_t &alpha, const Grid *u_grid) const {
-    // TODO DC
     real_t h = this->_geom->Mesh()[0];
     real_t u         = u_grid->Cell(it);
     real_t u_jp1     = u_grid->Cell(it.Top());
@@ -207,7 +209,8 @@ real_t Grid::DC_duv_dx(const Iterator &it, const real_t &alpha, const Grid *u_gr
     real_t v_im12 = (v + v_im1)/2.0;
     real_t v_ip12 = (v + v_ip1)/2.0;
 
-    //return 1.0 / h * (v_ip12*u_jp12 - v_im12*u_im1jp12);
+    real_t central = 1.0 / h * (v_ip12*u_jp12 - v_im12*u_im1jp12);
+
     real_t a;
     real_t b;
     if (u_jp12 > 0) {
@@ -220,12 +223,13 @@ real_t Grid::DC_duv_dx(const Iterator &it, const real_t &alpha, const Grid *u_gr
     } else {
         b = u_im1jp12 * v;
     }
-    return 1.0 / h * (a - b);
+    real_t donor_cell = 1.0 / h * (a - b);
+
+    return (1 - alpha) * central + alpha * donor_cell;
 }
 
 /// Computes d(v^2)/dy with the donor cell method
 real_t Grid::DC_dvv_dy(const Iterator &it, const real_t &alpha) const {
-    // TODO DC
     real_t h = this->_geom->Mesh()[1];
     real_t v_j   = this->Cell(it);
     real_t v_jm1 = this->Cell(it.Down());
@@ -233,12 +237,14 @@ real_t Grid::DC_dvv_dy(const Iterator &it, const real_t &alpha) const {
     real_t v_jp12 = (v_j + v_jp1)/2.0;
     real_t v_jm12 = (v_j + v_jm1)/2.0;
 
-    //return 1.0/h * (v_jp12*v_jp12 - v_jm12*v_jm12);
+    real_t central = 1.0/h * (v_jp12*v_jp12 - v_jm12*v_jm12);
 
-    return 1.0/h * (
+    real_t donor_cell = 1.0/h * (
         ((v_jp12 > 0) ? (v_jp12*v_j)   : (v_jp12*v_jp1)) -
         ((v_jm12 > 0) ? (v_jm12*v_jm1) : (v_jm12*v_j))
     );
+
+    return (1 - alpha) * central + alpha * donor_cell;
 }
 
 
