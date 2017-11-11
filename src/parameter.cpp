@@ -13,27 +13,46 @@ Parameter::Parameter() {
     this->_alpha   = 0.9;
     this->_itermax = 100;
     this->_tend    = 16.4;
+    this->_dt      = 0.2;
 }
 
 /// \brief load parameters from file
 /// whitespace seperated list of:
 /// re omega alpha dt tend eps tau itermax
 void Parameter::Load(const char *file) {
-    std::ifstream fin(file);
-
-    if (fin.fail()) {
-        throw std::runtime_error("Parameter::Load failed");
-    } else {
-        // TODO
-        fin >> _re;
-        fin >> _omega;
-        fin >> _alpha;
-        fin >> _dt;
-        fin >> _tend;
-        fin >> _eps;
-        fin >> _tau;
-        fin >> _itermax;
+    std::cout << "Loading parameters from " << file << std::endl;
+    std::ifstream fin (file);
+    std::string eq;
+    std::string param;
+    while (fin >> param >> eq) {
+        if (param == "re") {
+            fin >> this->_re;
+        } else if (param == "omega") {
+            fin >> this->_omega;
+        } else if (param == "tau") {
+            fin >> this->_tau;
+        } else if (param == "eps") {
+            fin >> this->_eps;
+        } else if (param == "alpha") {
+            fin >> this->_alpha;
+        } else if (param == "iter") {
+            fin >> this->_itermax;
+        } else if (param == "tend") {
+            fin >> this->_tend;
+        } else if (param == "dt") {
+            fin >> this->_dt;
+        } else {
+            throw std::runtime_error("unsupported parameter in parameter file");
+        }
     }
+    std::cout << "  re:    " << this->_re << std::endl;
+    std::cout << "  omega: " << this->_omega << std::endl;
+    std::cout << "  tau:   " << this->_tau << std::endl;
+    std::cout << "  eps:   " << this->_eps << std::endl;
+    std::cout << "  alpha: " << this->_alpha << std::endl;
+    std::cout << "  iter:  " << this->_itermax << std::endl;
+    std::cout << "  tend:  " << this->_tend << std::endl;
+    std::cout << "  dt:    " << this->_dt << std::endl;
 }
 
 const real_t &Parameter::Re() const {

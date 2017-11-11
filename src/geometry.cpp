@@ -10,11 +10,13 @@
 #include <fstream>
 #include <algorithm>
 
+#define N (12)
+
 /// \brief sets geometry for Driven Cavity
 Geometry::Geometry() : 
-    _size(128, 128),
+    _size(N, N),
     _length(1.0, 1.0),
-    _h(1.0/(128 + 1), 1.0/(128 + 1)),
+    _h(1.0/(N + 1), 1.0/(N + 1)),
     // velocity at upper boundary
     _velocity(1.0, 0.0),
     _pressure(0.1)  {
@@ -23,7 +25,35 @@ Geometry::Geometry() :
 
 /// \brief load geometry settings form file
 void Geometry::Load(const char *file) {
-    // TODO
+    std::cout << "Loading geometry from " << file << std::endl;
+    std::ifstream fin (file);
+    std::string param;
+    while (fin >> param) {
+        if (param == "size") {
+            fin >> this->_size[0] >> this->_size[1];
+            this->_h[0] = this->_length[0] / (this->_size[0] + 1);
+            this->_h[1] = this->_length[0] / (this->_size[1] + 1);
+        } else if (param == "length") {
+            fin >> this->_length[0] >> this->_length[1];
+            this->_h[0] = this->_length[0] / (this->_size[0] + 1);
+            this->_h[1] = this->_length[0] / (this->_size[1] + 1);
+        } else if (param == "velocity") {
+            fin >> this->_velocity[0] >> this->_velocity[1];
+        } else if (param == "pressure") {
+            fin >> this->_pressure;
+        } else if (param == "geometry") {
+            std::cout << "'geometry' parameter not yet supported. Skipping..." << std::endl;
+            break;
+        } else {
+            throw std::runtime_error("unsupported parameter in geometry file");
+        }
+    }
+    std::cout << "  size:     " << this->_size[0] << " " << this->_size[1] << std::endl;
+    std::cout << "  length:   " << this->_length[0] << " " << this->_length[1] << std::endl;
+    std::cout << "  -> h:     " << this->_h[0] << " " << this->_h[1] << std::endl;
+    std::cout << "  velocity: " << this->_velocity[0] << " " << this->_velocity[1] <<std::endl;
+    std::cout << "  pressure: " << this->_pressure << std::endl;
+    std::cout << "  geometry: " << "<skipped>" << std::endl;
 }
 
 

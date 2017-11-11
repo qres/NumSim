@@ -26,6 +26,12 @@ int main(int argc, char **argv) {
   // Create parameter and geometry instances with default values
   Parameter param;
   Geometry geom;
+  if (argc >= 2) {
+      param.Load(argv[1]);
+  }
+  if (argc >= 3) {
+      geom.Load(argv[2]);
+  }
   // Create the fluid solver
   Compute comp(&geom, &param);
 
