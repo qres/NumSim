@@ -93,8 +93,8 @@ void Compute::TimeStep(bool printInfo) {
     this->_geom->Update_U(this->_u);
     this->_geom->Update_V(this->_v);
     this->_geom->Update_P(this->_p);
-    
-    // timestep TODO
+
+    // timestep
     multi_real_t h = this->_geom->Mesh();
     real_t u_max = this->_u->AbsMax();
     real_t v_max = this->_v->AbsMax();
@@ -106,6 +106,11 @@ void Compute::TimeStep(bool printInfo) {
     ),  // stability condition for diffusion operator:
         re / 2 * (h[0]*h[0]*h[1]*h[1]) / (h[0]*h[0] + h[1]*h[1])
     ) * this->_param->Tau(); // scaling in range (0, 1)
+
+    // if an explicit timestep is given, use this timestep instead of the computed timestep
+    if (this->_param->Dt() > 0.0) {
+        dt = this->_param->Dt();
+    }
 
     // compute F and G
     this->MomentumEqu(dt);
