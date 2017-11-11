@@ -68,6 +68,9 @@ Compute::Compute(const Geometry *geom, const Parameter *param) {
     this->_u->Initialize(0);
     this->_v->Initialize(0);
     this->_p->Initialize(0);
+    this->_rhs->Initialize(0);
+    this->_F->Initialize(0);
+    this->_G->Initialize(0);
 }
 
 /// Deletes all grids
