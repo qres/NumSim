@@ -21,6 +21,10 @@
 #include "parameter.hpp"
 #include "visu.hpp"
 #include "vtk.hpp"
+#include <iostream>
+
+#undef USE_DEBUG_VISU
+//#define NO_VTK
 
 int main(int argc, char **argv) {
   // Create parameter and geometry instances with default values
@@ -41,8 +45,10 @@ int main(int argc, char **argv) {
   visu.Init(800, 800);
 #endif // USE_DEBUG_VISU
 
+#ifndef NO_VTK
   // Create a VTK generator
   VTK vtk(geom.Mesh(), geom.Length());
+#endif
 
   const Grid *visugrid;
   bool run = true;
@@ -50,6 +56,7 @@ int main(int argc, char **argv) {
   visugrid = comp.GetVelocity();
 
   // Run the time steps until the end is reached
+  uint32_t iter = 1;
   while (comp.GetTime() < param.Tend() && run) {
 #ifdef USE_DEBUG_VISU
     // Render and check if window is closed
@@ -74,16 +81,22 @@ int main(int argc, char **argv) {
     };
 #endif // DEBUG_VISU
 
+#ifndef NO_VTK
     // Create a VTK File in the folder VTK (must exist)
     vtk.Init("VTK/field");
     vtk.AddField("Velocity", comp.GetU(), comp.GetV());
     vtk.AddScalar("Pressure", comp.GetP());
     vtk.Finish();
+#endif
 
     // Run a few steps
-    for (uint32_t i = 0; i < 9; ++i)
-      comp.TimeStep(false);
+    for (uint32_t i = 0; i < 9; ++i) {
+        comp.TimeStep(false);
+        iter++;
+    }
+    std::cout << "Iteration: " << iter << " ";
     comp.TimeStep(true);
+    iter++;
   }
   return 0;
 }

@@ -13,7 +13,7 @@ Parameter::Parameter() {
     this->_alpha   = 0.9;
     this->_itermax = 100;
     this->_tend    = 16.4;
-    this->_dt      = 0.2;
+    this->_dt      = 0;
 }
 
 /// \brief load parameters from file
@@ -42,6 +42,7 @@ void Parameter::Load(const char *file) {
         } else if (param == "dt") {
             fin >> this->_dt;
         } else {
+            std::cout << param << std::endl;
             throw std::runtime_error("unsupported parameter in parameter file");
         }
     }
