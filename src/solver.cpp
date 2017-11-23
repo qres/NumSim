@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <fstream>
 #include <algorithm>
+#include <math.h>
 
 Solver::Solver(const Geometry *geom) {
     this->_geom = geom;
@@ -43,6 +44,14 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     InteriorIterator it(this->_geom);
     real_t omega = this->_omega;
     multi_real_t h = this->_geom->Mesh();
+    if (omega <= 0.0) {
+        if (h[0] == h[1]) {
+            // choose optimal omega for poisson with hx = hy
+            omega =  2.0 / (1.0 + std::sin(3.14159265359 * h[0]));
+        } else {
+            std::cerr << "ERR: optimal omega parameter can only be computed for h.x = h.y" << std::endl;
+        }
+    }
 
     for(it.First(); it.Valid(); it.Next()) {
         real_t p_ij = p->Cell(it);
@@ -67,8 +76,11 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     // compute residual
     real_t res = 0;
     for(it.First(); it.Valid(); it.Next()) {
-        res = std::max(res, std::abs(localRes(it, p, rhs)));
+        real_t loc = localRes(it, p, rhs);
+        res += loc*loc;
     }
+    res *= h[0] * h[1];
+    res = sqrt(res);
 
     return res;
 }
