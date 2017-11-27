@@ -13,7 +13,7 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+*/
 
 #include "typedef.hpp"
 //------------------------------------------------------------------------------
@@ -23,7 +23,8 @@
 class Compute {
 public:
   /// Creates a compute instance with given geometry and parameter
-  Compute(const Geometry *geom, const Parameter *param);
+  Compute(const Geometry *geom, const Parameter *param,
+          const Communicator *comm = 0);
   /// Deletes all grids
   ~Compute();
 
@@ -82,12 +83,13 @@ private:
 
   const Geometry *_geom;
   const Parameter *_param;
+  const Communicator *_comm;
 
   /// Compute the new velocites u,v from F,G
   void NewVelocities(const real_t &dt);
   /// Compute the temporary velocites F,G
   void MomentumEqu(const real_t &dt);
-  /// Compute the RHS of the poisson equation frŕom F,G
+  /// Compute the RHS of the poisson equation from F,G
   void RHS(const real_t &dt);
 };
 //------------------------------------------------------------------------------

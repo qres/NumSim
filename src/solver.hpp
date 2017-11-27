@@ -63,4 +63,18 @@ protected:
   real_t _omega;
 };
 //------------------------------------------------------------------------------
+
+/** concrete Red or Balck SOR solver
+ */
+class RedOrBlackSOR : public SOR {
+public:
+  /// Constructs an actual SOR solver
+  RedOrBlackSOR(const Geometry *geom, const real_t &omega);
+  /// Destructor
+  ~RedOrBlackSOR();
+
+  real_t RedCycle(Grid *grid, const Grid *rhs) const;
+  real_t BlackCycle(Grid *grid, const Grid *rhs) const;
+};
+//------------------------------------------------------------------------------
 #endif // __SOLVER_HPP

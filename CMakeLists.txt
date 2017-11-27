@@ -1,3 +1,4 @@
+#
 # Copyright (C) 2015   Michael Lahnert
 #
 # This program is free software: you can redistribute it and/or modify
@@ -12,6 +13,7 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
 project (NUMSIM)
 
@@ -41,11 +43,12 @@ PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${SDL2_INCLUDE_DIRS})
 
 # find mpi
-#find_package (MPI REQUIRED)
-#INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${MPI_INCLUDE_PATH})
+find_package (MPI REQUIRED)
+INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${MPI_INCLUDE_PATH})
 
 # Using glob is discouraged in cmake.
 set (HEADERS
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/communicator.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/compute.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/grid.hpp
@@ -54,11 +57,11 @@ set (HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/typedef.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/vtk.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/zeitgeist.hpp
   )
 
 set (SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/communicator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/compute.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometry.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/grid.cpp

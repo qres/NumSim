@@ -42,7 +42,7 @@ public:
   /// Read access to the grid cell at position [it]
   const real_t &Cell(const Iterator &it) const;
 
-  /// Interpolate the value at a arbitrary position
+  /// Interpolate the value at an arbitrary position
   real_t Interpolate(const multi_real_t &pos) const;
 
   /// Computes the left-sided difference quatient in x-dim at [it]
@@ -76,6 +76,13 @@ public:
 
   /// Returns a pointer to the raw data
   real_t *Data();
+
+  /** Get the offset value of the grid
+   */
+  const multi_real_t &getOffset() const;
+
+  /// Return a pointer to the Geometry
+  const Geometry *getGeometry() const;
 
 private:
   real_t *_data;

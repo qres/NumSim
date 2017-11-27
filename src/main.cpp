@@ -15,21 +15,26 @@
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+//------------------------------------------------------------------------------
 #include "typedef.hpp"
+#include "communicator.hpp"
 #include "compute.hpp"
 #include "geometry.hpp"
 #include "parameter.hpp"
 #include "visu.hpp"
 #include "vtk.hpp"
+
 #include <iostream>
+#include <sys/stat.h>
 
 #undef USE_DEBUG_VISU
 //#define NO_VTK
 
 int main(int argc, char **argv) {
   // Create parameter and geometry instances with default values
+  Communicator comm(&argc, &argv);
   Parameter param;
-  Geometry geom;
+  Geometry geom(&comm);
   if (argc >= 2) {
       param.Load(argv[1]);
   }
@@ -37,33 +42,48 @@ int main(int argc, char **argv) {
       geom.Load(argv[2]);
   }
   // Create the fluid solver
-  Compute comp(&geom, &param);
+  Compute comp(&geom, &param, &comm);
+
+  if (comm.getRank() == 0) {
+    // check if folder "VTK" exists
+    struct stat info;
+
+    if (stat("VTK", &info) != 0) {
+      system("mkdir VTK");
+    }
+  }
 
 #ifdef USE_DEBUG_VISU
   // Create and initialize the visualization
   Renderer visu(geom.Length(), geom.Mesh());
-  visu.Init(800, 800);
+  visu.Init(800 / comm.ThreadDim()[0], 800 / comm.ThreadDim()[1],
+            comm.getRank() + 1);
 #endif // USE_DEBUG_VISU
 
 #ifndef NO_VTK
   // Create a VTK generator
-  VTK vtk(geom.Mesh(), geom.Length());
+  // use offset as the domain shift
+  multi_real_t offset;
+  offset[0] = comm.ThreadIdx()[0] * (geom.Mesh()[0] * (double)(geom.Size()[0] - 2));
+  offset[1] = comm.ThreadIdx()[1] * (geom.Mesh()[1] * (double)(geom.Size()[1] - 2));
+  VTK vtk(geom.Mesh(), geom.Length(), geom.TotalLength(), offset, comm.getRank(),
+          comm.getSize(), comm.ThreadDim());
 #endif
 
+#ifdef USE_DEBUG_VISU
   const Grid *visugrid;
-  bool run = true;
 
   visugrid = comp.GetVelocity();
+#endif // USE_DEBUG_VISU
 
   // Run the time steps until the end is reached
   uint32_t iter = 1;
-  while (comp.GetTime() < param.Tend() && run) {
+  while (comp.GetTime() < param.Tend()) {
 #ifdef USE_DEBUG_VISU
     // Render and check if window is closed
     switch (visu.Render(visugrid)) {
     case -1:
-      run = false;
-      break;
+      return -1;
     case 0:
       visugrid = comp.GetVelocity();
       break;
@@ -82,20 +102,26 @@ int main(int argc, char **argv) {
 #endif // DEBUG_VISU
 
 #ifndef NO_VTK
-    // Create a VTK File in the folder VTK (must exist)
+    // Create VTK Files in the folder VTK
+    // Note that when using VTK module as it is you first have to write cell
+    // information, then call SwitchToPointData(), and then write point data.
     vtk.Init("VTK/field");
-    vtk.AddField("Velocity", comp.GetU(), comp.GetV());
-    vtk.AddScalar("Pressure", comp.GetP());
+    vtk.AddRank();
+    vtk.AddCellField("Cell Velocity", comp.GetU(), comp.GetV());
+    vtk.SwitchToPointData();
+    vtk.AddPointField("Velocity", comp.GetU(), comp.GetV());
+    vtk.AddPointScalar("Pressure", comp.GetP());
     vtk.Finish();
 #endif
 
     // Run a few steps
     for (uint32_t i = 0; i < 9; ++i) {
-        comp.TimeStep(false);
-        iter++;
+      comp.TimeStep(false);
+      iter++;
     }
-    std::cout << "Iteration: " << iter << " ";
-    comp.TimeStep(true);
+    bool printOnlyOnMaster = !comm.getRank();
+    if (printOnlyOnMaster) std::cout << "Iteration: " << iter << " ";
+    comp.TimeStep(printOnlyOnMaster);
     iter++;
   }
   return 0;

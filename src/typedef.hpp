@@ -39,7 +39,8 @@ typedef INDEX_TYPE index_t;
 //------------------------------------------------------------------------------
 
 /// Template for array/vector types
-template <typename _type, uint32_t _dim> struct array_t {
+template <typename _type, uint32_t _dim>
+struct array_t {
   // Constructors
   // Empty; initialize array_t to 0
   array_t() {
@@ -88,6 +89,7 @@ typedef array_t<index_t, DIM> multi_index_t;
 
 /// Forward declaration of classes used
 class Iterator;
+class Communicator;
 class Geometry;
 class Grid;
 class Parameter;
