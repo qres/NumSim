@@ -3,6 +3,7 @@
 #include "geometry.hpp"
 #include "iterator.hpp"
 #include "parameter.hpp"
+#include "communicator.hpp"
 #include "typedef.hpp"
 
 #include <iostream>
@@ -13,14 +14,23 @@
 #define N (12)
 
 /// \brief sets geometry for Driven Cavity
-Geometry::Geometry() : 
+Geometry::Geometry() : Geometry(0) {
+
+}
+
+Geometry::Geometry(const Communicator *comm) :
     _size(N, N),
     _length(1.0, 1.0),
     _h(1.0/(N + 1), 1.0/(N + 1)),
     // velocity at upper boundary
     _velocity(1.0, 0.0),
-    _pressure(0.1)  {
-    
+    _pressure(0.1),
+    _comm(comm) {
+
+    _bsize[0] = _size[0]/_comm->ThreadDim()[0];
+    _bsize[1] = _size[1]/_comm->ThreadDim()[1];
+    _blength[0] = _length[0]/_comm->ThreadDim()[0];
+    _blength[1] = _length[1]/_comm->ThreadDim()[1];
 }
 
 /// \brief load geometry settings form file
@@ -54,15 +64,28 @@ void Geometry::Load(const char *file) {
     std::cout << "  velocity: " << this->_velocity[0] << " " << this->_velocity[1] <<std::endl;
     std::cout << "  pressure: " << this->_pressure << std::endl;
     std::cout << "  geometry: " << "<skipped>" << std::endl;
+
+    _bsize[0] = _size[0]/_comm->ThreadDim()[0];
+    _bsize[1] = _size[1]/_comm->ThreadDim()[1];
+    _blength[0] = _length[0]/_comm->ThreadDim()[0];
+    _blength[1] = _length[1]/_comm->ThreadDim()[1];
 }
 
 
-const multi_index_t &Geometry::Size() const {
+const multi_index_t &Geometry::TotalSize() const {
     return this->_size;
 }
 
-const multi_real_t &Geometry::Length() const {
+const multi_real_t &Geometry::TotalLength() const {
     return this->_length;
+}
+
+const multi_index_t &Geometry::Size() const {
+    return this->_bsize;
+}
+
+const multi_real_t &Geometry::Length() const {
+    return this->_blength;
 }
 
 const multi_real_t &Geometry::Mesh() const {

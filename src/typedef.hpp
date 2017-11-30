@@ -26,6 +26,7 @@
 
 #define DIM 2
 #define REAL_TYPE double
+#define MPI_REAL MPI_DOUBLE
 #define INDEX_TYPE uint32_t
 
 //------------------------------------------------------------------------------

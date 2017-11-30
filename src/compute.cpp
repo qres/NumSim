@@ -5,6 +5,7 @@
 #include "parameter.hpp"
 #include "solver.hpp"
 #include "typedef.hpp"
+#include "communicator.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -13,7 +14,7 @@
 
 
 /// Creates a compute instance with given geometry and parameter
-Compute::Compute(const Geometry *geom, const Parameter *param) {
+Compute::Compute(const Geometry *geom, const Parameter *param, const Communicator *comm) {
     this->_t = 0;
     this->_dtlimit = param->Dt();
     this->_epslimit = param->Eps();
@@ -63,6 +64,7 @@ Compute::Compute(const Geometry *geom, const Parameter *param) {
 
     this->_geom = geom;
     this->_param = param;
+    this->_comm = comm;
 
     // TODO init values to zero?
     this->_u->Initialize(0);
@@ -131,7 +133,7 @@ void Compute::TimeStep(bool printInfo) {
     if (printInfo) {
         std::cout << "[t=" << this->_t << "] Solved poisson eq in " << iter << " iterations and final residual of " << res << std::endl;
     }
-    
+
 }
 
 /// Returns the simulated time in total

@@ -63,9 +63,9 @@ private:
   const Communicator *_comm;
 
   multi_index_t _size;
-  multi_index_t _bsize;
+  multi_index_t _bsize; // block size
   multi_real_t _length;
-  multi_real_t _blength;
+  multi_real_t _blength; // block size
   multi_real_t _h;
 
   multi_real_t _velocity;

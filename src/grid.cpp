@@ -23,11 +23,11 @@ Grid::Grid(const Geometry *geom) : Grid(geom, multi_real_t(0.0, 0.0)) {
 Grid::Grid(const Geometry *geom, const multi_real_t &offset) {
     this->_geom = geom;
     this->_offset = offset;
-    
+
     multi_index_t N = geom->Size();
     // add boundary
     size_t size = (N[0] + 2) * (N[1] + 2);
-    
+
     this->_data = new real_t[size];
 }
 
@@ -79,7 +79,7 @@ real_t Grid::Interpolate(const multi_real_t &pos) const {
     real_t u_ip1  = this->_data[i + 1  +  j       * stride_y];
     real_t u_jp1  = this->_data[i      +  (j + 1) * stride_y];
     real_t u_ijp1 = this->_data[i + 1  +  (j + 1) * stride_y];
-    
+
     // bilinear interpolation
     return 1.0/(h[0]*h[1]) * (
         u      * dx2 * dy2 +
@@ -278,3 +278,6 @@ real_t *Grid::Data() {
     return this->_data;
 }
 
+const Geometry *Grid::getGeometry() const {
+    return this->_geom;
+}
