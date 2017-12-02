@@ -4,16 +4,48 @@
 #include "geometry.hpp"
 #include <iostream>
 #include "typedef.hpp"
+#include <cmath>
 
 Communicator::Communicator(int *argc, char ***argv) {
     MPI_Init(argc, argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &this->_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &this->_size);
 
-    // compute based on _size
-    this->_tdim = multi_index_t(2,1); // TODO
+    this->_tdim = multi_index_t(1,1);
     this->_tidx = multi_index_t(_rank % this->_tdim[0], _rank / this->_tdim[0]);
     this->_evenodd = (_tidx[0] + _tidx[1]) % 2 == 0;
+}
+
+void Communicator::opt_geom(Geometry* geom) {
+    multi_index_t size = geom->TotalSize();
+    real_t opt = (real_t)size[0] / (real_t)size[1];
+
+    // minimize boundary surface
+    int num_ranks = this->getSize();
+    real_t current_op = 1.0 / num_ranks;
+    int best_x = 1;
+    for (int num_x = 1; num_x <= num_ranks; num_x++) {
+        if (num_ranks % num_x == 0) { // we can divide the grid evenly
+            real_t surf = (real_t)num_x / (num_ranks / num_x);
+            if (std::abs(opt - surf) < std::abs(opt - current_op)) { // less surface
+                current_op = surf;
+                best_x = num_x;
+            }
+        }
+    }
+
+    multi_index_t thread_dim (best_x, num_ranks / best_x);
+
+    this->_tdim = thread_dim;
+    this->_tidx = multi_index_t(getRank() % this->_tdim[0], getRank() / this->_tdim[0]);
+    this->_evenodd = (_tidx[0] + _tidx[1]) % 2 == 0;
+
+    // update the local size for the geometry
+    geom->split_for_comm();
+
+    std::cout << "Optimized geometry" << std::endl;
+    std::cout << "  thr dim  " << thread_dim[0] << " " << thread_dim[1] << std::endl;
+    std::cout << "  for size " << size[0] << " " << size[1] << std::endl;
 }
 
 Communicator::~Communicator() {

@@ -31,6 +31,10 @@ public:
    */
   Communicator(int *argc, char ***argv);
 
+  // optimizes the threads in x and y dimension to reduce the communication surface
+  // and updates the geometry
+  void opt_geom(Geometry* geom);
+
   /** Communicator destructor; finalizes MPI Environment
    */
   ~Communicator();

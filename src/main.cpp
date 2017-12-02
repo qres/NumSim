@@ -41,6 +41,8 @@ int main(int argc, char **argv) {
   if (argc >= 3) {
       geom.Load(argv[2]);
   }
+  // resize the therads according to the grid
+  comm.opt_geom(&geom);
   // Create the fluid solver
   Compute comp(&geom, &param, &comm);
 

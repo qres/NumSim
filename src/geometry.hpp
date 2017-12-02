@@ -41,6 +41,9 @@ public:
   /// Loads a geometry from a file
   void Load(const char *file);
 
+  /// reads the thread dim fromm communicator and sets the local grid sizes
+  void split_for_comm();
+
   /// Returns the number of cells in each dimension
   const multi_index_t &Size() const;
   /// Returns the total number of cells in each dimension

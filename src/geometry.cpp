@@ -27,6 +27,10 @@ Geometry::Geometry(const Communicator *comm) :
     _pressure(0.1),
     _comm(comm) {
 
+    this->split_for_comm();
+}
+
+void Geometry::split_for_comm() {
     _bsize[0] = _size[0]/_comm->ThreadDim()[0];
     _bsize[1] = _size[1]/_comm->ThreadDim()[1];
     _blength[0] = _length[0]/_comm->ThreadDim()[0];
@@ -65,10 +69,7 @@ void Geometry::Load(const char *file) {
     std::cout << "  pressure: " << this->_pressure << std::endl;
     std::cout << "  geometry: " << "<skipped>" << std::endl;
 
-    _bsize[0] = _size[0]/_comm->ThreadDim()[0];
-    _bsize[1] = _size[1]/_comm->ThreadDim()[1];
-    _blength[0] = _length[0]/_comm->ThreadDim()[0];
-    _blength[1] = _length[1]/_comm->ThreadDim()[1];
+    this->split_for_comm();
 }
 
 
