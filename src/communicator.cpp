@@ -144,12 +144,12 @@ void Communicator::copyBoundary(Grid *grid) const {
             const index_t rowNp1 = (Ny+1)*stride_y;
             if (isTop()) {
                 // TOP
-                MPI_Send(&data[rowN],   1, grid_row, getRank() + stride_ry, 1, MPI_COMM_WORLD);                    // send N -> top
-                MPI_Recv(&data[rowNp1], 1, grid_row, getRank() + stride_ry, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // recive top -> N+1
-            } else if (isBottom()) {
-                // BOTTOM
                 MPI_Recv(&data[row0], 1, grid_row, getRank() - stride_ry, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // recive down -> 0
                 MPI_Send(&data[row1], 1, grid_row, getRank() - stride_ry, 1, MPI_COMM_WORLD);                    // send 1 -> down
+            } else if (isBottom()) {
+                // BOTTOM
+                MPI_Send(&data[rowN],   1, grid_row, getRank() + stride_ry, 1, MPI_COMM_WORLD);                    // send N -> top
+                MPI_Recv(&data[rowNp1], 1, grid_row, getRank() + stride_ry, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // recive top -> N+1
             } else {
                 // INNER
                 MPI_Sendrecv(
@@ -160,7 +160,7 @@ void Communicator::copyBoundary(Grid *grid) const {
                 );
                 MPI_Sendrecv(
                     &data[row1],   1, grid_row, getRank() - stride_ry, 1, // send 1 -> down
-                    &data[rowN+1], 1, grid_row, getRank() + stride_ry, 1, // recive top -> N+1
+                    &data[rowNp1], 1, grid_row, getRank() + stride_ry, 1, // recive top -> N+1
                     MPI_COMM_WORLD,
                     MPI_STATUS_IGNORE
                 );
@@ -223,13 +223,13 @@ const bool Communicator::isRight() const {
 /** Decide whether our top boundary is a domain boundary
 */
 const bool Communicator::isTop() const {
-    return this->_tidx[1] == 0;
+    return this->_tidx[1] == this->_tdim[1] - 1;
 }
 
 /** Decide whether our bottom boundary is a domain boundary
 */
 const bool Communicator::isBottom() const {
-    return this->_tidx[1] == this->_tdim[1] - 1;
+    return this->_tidx[1] == 0;
 }
 
 /** Get MPI rank of current process
