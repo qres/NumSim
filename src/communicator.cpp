@@ -1,4 +1,4 @@
-#include <mpi/mpi.h> # keep this at the top. Otherwise we get problems with MPI_REAL
+#include <mpi/mpi.h> # keep this at the top. Otherwise we get problems with MPI_REAL_T
 
 #include "communicator.hpp"
 #include "geometry.hpp"
@@ -46,7 +46,7 @@ const bool& Communicator::EvenOdd() const {
  */
 real_t Communicator::gatherSum(const real_t &val) const {
     real_t reduced;
-    MPI_Allreduce(&val, &reduced, 1, MPI_REAL, MPI_SUM, MPI_COMM_WORLD);
+    MPI_Allreduce(const_cast<real_t*>(&val), &reduced, 1, MPI_REAL_T, MPI_SUM, MPI_COMM_WORLD);
     return reduced;
 }
 
@@ -57,7 +57,7 @@ real_t Communicator::gatherSum(const real_t &val) const {
  */
 real_t Communicator::gatherMin(const real_t &val) const {
     real_t reduced;
-    MPI_Allreduce(&val, &reduced, 1, MPI_REAL, MPI_MIN, MPI_COMM_WORLD);
+    MPI_Allreduce(const_cast<real_t*>(&val), &reduced, 1, MPI_REAL_T, MPI_MIN, MPI_COMM_WORLD);
     return reduced;
 }
 
@@ -68,7 +68,7 @@ real_t Communicator::gatherMin(const real_t &val) const {
  */
 real_t Communicator::gatherMax(const real_t &val) const {
     real_t reduced;
-    MPI_Allreduce(&val, &reduced, 1, MPI_REAL, MPI_MAX, MPI_COMM_WORLD);
+    MPI_Allreduce(const_cast<real_t*>(&val), &reduced, 1, MPI_REAL_T, MPI_MAX, MPI_COMM_WORLD);
     return reduced;
 }
 
@@ -85,9 +85,8 @@ void Communicator::copyBoundary(Grid *grid) const {
     MPI_Datatype grid_col;
     const multi_index_t grid_stride(1, Nx+2);
     // MPI_Type_vector(number of blocks, elems per block, stride for blocks, type in block, new_type)
-    //MPI_Type_vector(1, grid_size[0], 0, MPI_REAL, &grid_row); alternative as the block is contineous
-    MPI_Type_vector(grid_size[0] + 2, 1, grid_stride[0], MPI_REAL, &grid_row);
-    MPI_Type_vector(grid_size[1] + 2, 1, grid_stride[1], MPI_REAL, &grid_col);
+    MPI_Type_vector(grid_size[0] + 2, 1, grid_stride[0], MPI_REAL_T, &grid_row);
+    MPI_Type_vector(grid_size[1] + 2, 1, grid_stride[1], MPI_REAL_T, &grid_col);
     MPI_Type_commit(&grid_row);
     MPI_Type_commit(&grid_col);
 
@@ -137,7 +136,7 @@ void Communicator::copyBoundary(Grid *grid) const {
         }
         // copy to the top, copy down
         if (ThreadDim()[1] > 1) {
-            const index_t stride_y = grid_size[0];
+            const index_t stride_y = grid_size[0] + 2;
             const index_t stride_ry = ThreadDim()[0];
             const index_t row0   = 0;
             const index_t row1   = stride_y;
