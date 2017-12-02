@@ -11,7 +11,7 @@ Communicator::Communicator(int *argc, char ***argv) {
     MPI_Comm_size(MPI_COMM_WORLD, &this->_size);
 
     // compute based on _size
-    this->_tdim = multi_index_t(1,1); // TODO
+    this->_tdim = multi_index_t(2,1); // TODO
     this->_tidx = multi_index_t(_rank % this->_tdim[0], _rank / this->_tdim[0]);
     this->_evenodd = (_tidx[0] + _tidx[1]) % 2 == 0;
 }

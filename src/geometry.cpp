@@ -96,86 +96,109 @@ const multi_real_t &Geometry::Mesh() const {
 void Geometry::Update_U(Grid *u) const {
     BoundaryIterator it (this);
 
-    it.SetBoundary(Boundary::Bottom);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip => define boundary s.t. the interpolated value is zero
-        u->Cell(it) = - u->Cell(it.Top());
+    if (this->_comm->isBottom()) {
+        it.SetBoundary(Boundary::Bottom);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip => define boundary s.t. the interpolated value is zero
+            u->Cell(it) = - u->Cell(it.Top());
+        }
     }
 
-    it.SetBoundary(Boundary::Left);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip
-        u->Cell(it) = 0.0;
+    if (this->_comm->isLeft()) {
+        it.SetBoundary(Boundary::Left);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip
+            u->Cell(it) = 0.0;
+        }
     }
 
-    it.SetBoundary(Boundary::Right);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip, staggered grid => set left (= boundary) point to zero
-        u->Cell(it) = 0.0;
-        u->Cell(it.Left()) = 0.0;
+    if (this->_comm->isRight()) {
+        it.SetBoundary(Boundary::Right);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip, staggered grid => set left (= boundary) point to zero
+            u->Cell(it) = 0.0;
+            u->Cell(it.Left()) = 0.0;
+        }
     }
 
-    it.SetBoundary(Boundary::Top);
-    for(it.First(); it.Valid(); it.Next()) {
-        // velocity given
-        u->Cell(it) = 2* this->_velocity[0] - u->Cell(it.Down());
+    if (this->_comm->isTop()) {
+        it.SetBoundary(Boundary::Top);
+        for(it.First(); it.Valid(); it.Next()) {
+            // velocity given
+            u->Cell(it) = 2* this->_velocity[0] - u->Cell(it.Down());
+        }
     }
 }
 
 void Geometry::Update_V(Grid *v) const {
     BoundaryIterator it (this);
 
-    it.SetBoundary(Boundary::Bottom);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip
-        v->Cell(it) = 0.0;
+    if (this->_comm->isBottom()) {
+        it.SetBoundary(Boundary::Bottom);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip
+            v->Cell(it) = 0.0;
+        }
     }
 
-    it.SetBoundary(Boundary::Left);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip => define boundary s.t. the interpolated value is zero
-        v->Cell(it) = - v->Cell(it.Right());
+    if (this->_comm->isLeft()) {
+        it.SetBoundary(Boundary::Left);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip => define boundary s.t. the interpolated value is zero
+            v->Cell(it) = - v->Cell(it.Right());
+        }
     }
 
-    it.SetBoundary(Boundary::Right);
-    for(it.First(); it.Valid(); it.Next()) {
-        // no slip => define boundary s.t. the interpolated value is zero
-        v->Cell(it) = - v->Cell(it.Left());
+    if (this->_comm->isRight()) {
+        it.SetBoundary(Boundary::Right);
+        for(it.First(); it.Valid(); it.Next()) {
+            // no slip => define boundary s.t. the interpolated value is zero
+            v->Cell(it) = - v->Cell(it.Left());
+        }
     }
 
-    it.SetBoundary(Boundary::Top);
-    for(it.First(); it.Valid(); it.Next()) {
-        // velocity given
-        v->Cell(it) = this->_velocity[1];
-        v->Cell(it.Down()) = this->_velocity[1];
+    if (this->_comm->isTop()) {
+        it.SetBoundary(Boundary::Top);
+        for(it.First(); it.Valid(); it.Next()) {
+            // velocity given
+            v->Cell(it) = this->_velocity[1];
+            v->Cell(it.Down()) = this->_velocity[1];
+        }
     }
 }
 
 void Geometry::Update_P(Grid *p) const {
     BoundaryIterator it (this);
 
-    it.SetBoundary(Boundary::Bottom);
-    for(it.First(); it.Valid(); it.Next()) {
-        // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
-        p->Cell(it) = p->Cell(it.Top());
+    if (this->_comm->isBottom()) {
+        it.SetBoundary(Boundary::Bottom);
+        for(it.First(); it.Valid(); it.Next()) {
+            // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
+            p->Cell(it) = p->Cell(it.Top());
+        }
     }
 
-    it.SetBoundary(Boundary::Left);
-    for(it.First(); it.Valid(); it.Next()) {
-        // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
-        p->Cell(it) = p->Cell(it.Right());
+    if (this->_comm->isLeft()) {
+        it.SetBoundary(Boundary::Left);
+        for(it.First(); it.Valid(); it.Next()) {
+            // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
+            p->Cell(it) = p->Cell(it.Right());
+        }
     }
 
-    it.SetBoundary(Boundary::Right);
-    for(it.First(); it.Valid(); it.Next()) {
-        // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
-        p->Cell(it) = p->Cell(it.Left());
+    if (this->_comm->isRight()) {
+        it.SetBoundary(Boundary::Right);
+        for(it.First(); it.Valid(); it.Next()) {
+            // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
+            p->Cell(it) = p->Cell(it.Left());
+        }
     }
 
-    it.SetBoundary(Boundary::Top);
-    for(it.First(); it.Valid(); it.Next()) {
-        // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
-        p->Cell(it) = p->Cell(it.Down());
-
+    if (this->_comm->isTop()) {
+        it.SetBoundary(Boundary::Top);
+        for(it.First(); it.Valid(); it.Next()) {
+            // after choosong F_0,j := u_0,j we get homogeneous Neumann boundary conditions
+            p->Cell(it) = p->Cell(it.Down());
+        }
     }
 }

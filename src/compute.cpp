@@ -114,18 +114,29 @@ void Compute::TimeStep(bool printInfo) {
         dt = this->_param->Dt();
     }
 
+    dt = this->_comm->gatherMin(dt);
+
     // compute F and G
     this->MomentumEqu(dt);
+    this->_comm->copyBoundary(this->_F);
+    this->_comm->copyBoundary(this->_G);
     // solve poisson equation for p
     this->RHS(dt);
     real_t res = 12345678.9;
     index_t iter = 0;
+
     while (res > this->_epslimit && iter < this->_param->IterMax()) {
         res = this->_solver->Cycle(this->_p, this->_rhs);
+        this->_comm->copyBoundary(this->_p);
+        res = this->_comm->gatherSum(res*res); // undo sqrt in norm sum up squared terms
+        res = sqrt(res);                       // redo sqrt to get 2-norm
         iter++;
     }
+
     // compute new velocities from F and G and the p derivatives
     this->NewVelocities(dt);
+    this->_comm->copyBoundary(this->_u);
+    this->_comm->copyBoundary(this->_v);
 
     // increment simulated time
     this->_t += dt;
