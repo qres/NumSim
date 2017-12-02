@@ -52,6 +52,10 @@ public:
    */
   const bool &EvenOdd() const;
 
+  /** sends val to a
+   */
+  real_t bcast(const real_t& val, const int root) const;
+
   /** Gets the sum of all values and distributes the result among all
    *  processes
    *

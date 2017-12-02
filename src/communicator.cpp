@@ -73,6 +73,13 @@ const bool& Communicator::EvenOdd() const {
     return this->_evenodd;
 }
 
+real_t Communicator::bcast(const real_t& val, int root) const {
+    real_t new_val = val;
+    MPI_Bcast(&new_val, 1, MPI_REAL_T, root, MPI_COMM_WORLD);
+    return new_val;
+}
+
+
 /** Gets the sum of all values and distributes the result among all
  *  processes
  *

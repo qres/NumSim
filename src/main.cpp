@@ -74,6 +74,7 @@ int main(int argc, char **argv) {
 
 #ifdef USE_DEBUG_VISU
   const Grid *visugrid;
+  const int old_vis_mode = 0;
 
   visugrid = comp.GetVelocity();
 #endif // USE_DEBUG_VISU
@@ -83,7 +84,12 @@ int main(int argc, char **argv) {
   while (comp.GetTime() < param.Tend()) {
 #ifdef USE_DEBUG_VISU
     // Render and check if window is closed
-    switch (visu.Render(visugrid)) {
+    int vis_mode = visu.Render(visugrid);
+
+    // bcast vis_mode to other ranks
+    vis_mode = comm.bcast(vis_mode, 0);
+
+    switch (vis_mode) {
     case -1:
       return -1;
     case 0:
@@ -97,6 +103,12 @@ int main(int argc, char **argv) {
       break;
     case 3:
       visugrid = comp.GetP();
+      break;
+    case 4:
+      visugrid = comp.GetVorticity();
+      break;
+    case 5:
+      visugrid = comp.GetStream();
       break;
     default:
       break;
