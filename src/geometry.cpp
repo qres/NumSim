@@ -39,7 +39,7 @@ void Geometry::split_for_comm() {
 
 /// \brief load geometry settings form file
 void Geometry::Load(const char *file) {
-    std::cout << "Loading geometry from " << file << std::endl;
+    if (this->_comm->getRank() == 0) std::cout << "Loading geometry from " << file << std::endl;
     std::ifstream fin (file);
     std::string param;
     while (fin >> param) {
@@ -62,12 +62,14 @@ void Geometry::Load(const char *file) {
             throw std::runtime_error("unsupported parameter in geometry file");
         }
     }
-    std::cout << "  size:     " << this->_size[0] << " " << this->_size[1] << std::endl;
-    std::cout << "  length:   " << this->_length[0] << " " << this->_length[1] << std::endl;
-    std::cout << "  -> h:     " << this->_h[0] << " " << this->_h[1] << std::endl;
-    std::cout << "  velocity: " << this->_velocity[0] << " " << this->_velocity[1] <<std::endl;
-    std::cout << "  pressure: " << this->_pressure << std::endl;
-    std::cout << "  geometry: " << "<skipped>" << std::endl;
+    if (this->_comm->getRank() == 0) {
+        std::cout << "  size:     " << this->_size[0] << " " << this->_size[1] << std::endl;
+        std::cout << "  length:   " << this->_length[0] << " " << this->_length[1] << std::endl;
+        std::cout << "  -> h:     " << this->_h[0] << " " << this->_h[1] << std::endl;
+        std::cout << "  velocity: " << this->_velocity[0] << " " << this->_velocity[1] <<std::endl;
+        std::cout << "  pressure: " << this->_pressure << std::endl;
+        std::cout << "  geometry: " << "<skipped>" << std::endl;
+    }
 
     this->split_for_comm();
 }

@@ -27,7 +27,7 @@ public:
   Parameter();
 
   /// Loads the parameter values from a file
-  void Load(const char *file);
+  void Load(const char *file, bool print = true);
 
   /// Getter functions for all parameters
   const real_t &Re() const;

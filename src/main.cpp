@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
   Parameter param;
   Geometry geom(&comm);
   if (argc >= 2) {
-      param.Load(argv[1]);
+      param.Load(argv[1], comm.getRank() == 0);
   }
   if (argc >= 3) {
       geom.Load(argv[2]);

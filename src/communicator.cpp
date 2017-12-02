@@ -43,9 +43,11 @@ void Communicator::opt_geom(Geometry* geom) {
     // update the local size for the geometry
     geom->split_for_comm();
 
-    std::cout << "Optimized geometry" << std::endl;
-    std::cout << "  thr dim  " << thread_dim[0] << " " << thread_dim[1] << std::endl;
-    std::cout << "  for size " << size[0] << " " << size[1] << std::endl;
+    if (this->getRank() == 0) {
+        std::cout << "Optimized geometry" << std::endl;
+        std::cout << "  thread dim " << thread_dim[0] << " " << thread_dim[1] << std::endl;
+        std::cout << "  for size   " << size[0] << " " << size[1] << std::endl;
+    }
 }
 
 Communicator::~Communicator() {

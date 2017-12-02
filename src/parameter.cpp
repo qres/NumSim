@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <fstream>
 
-/// \brief sets parameters for Driven Cavity 
+/// \brief sets parameters for Driven Cavity
 Parameter::Parameter() {
     this->_re      = 1000;
     this->_omega   = 1.7;
@@ -19,8 +19,8 @@ Parameter::Parameter() {
 /// \brief load parameters from file
 /// whitespace seperated list of:
 /// re omega alpha dt tend eps tau itermax
-void Parameter::Load(const char *file) {
-    std::cout << "Loading parameters from " << file << std::endl;
+void Parameter::Load(const char *file, bool print) {
+    if (print) std::cout << "Loading parameters from " << file << std::endl;
     std::ifstream fin (file);
     std::string eq;
     std::string param;
@@ -46,14 +46,17 @@ void Parameter::Load(const char *file) {
             throw std::runtime_error("unsupported parameter in parameter file");
         }
     }
-    std::cout << "  re:    " << this->_re << std::endl;
-    std::cout << "  omega: " << this->_omega << std::endl;
-    std::cout << "  tau:   " << this->_tau << std::endl;
-    std::cout << "  eps:   " << this->_eps << std::endl;
-    std::cout << "  alpha: " << this->_alpha << std::endl;
-    std::cout << "  iter:  " << this->_itermax << std::endl;
-    std::cout << "  tend:  " << this->_tend << std::endl;
-    std::cout << "  dt:    " << this->_dt << std::endl;
+
+    if (print) {
+        std::cout << "  re:    " << this->_re << std::endl;
+        std::cout << "  omega: " << this->_omega << std::endl;
+        std::cout << "  tau:   " << this->_tau << std::endl;
+        std::cout << "  eps:   " << this->_eps << std::endl;
+        std::cout << "  alpha: " << this->_alpha << std::endl;
+        std::cout << "  iter:  " << this->_itermax << std::endl;
+        std::cout << "  tend:  " << this->_tend << std::endl;
+        std::cout << "  dt:    " << this->_dt << std::endl;
+    }
 }
 
 const real_t &Parameter::Re() const {
