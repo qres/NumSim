@@ -12,6 +12,8 @@
 #include <fstream>
 #include <algorithm>
 
+#include <mpi/mpi.h>
+
 
 /// Creates a compute instance with given geometry and parameter
 Compute::Compute(const Geometry *geom, const Parameter *param, const Communicator *comm) {
@@ -184,11 +186,95 @@ const Grid *Compute::GetVelocity() {
 }
 /// Computes and returns the vorticity
 const Grid *Compute::GetVorticity() {
-    throw std::runtime_error("Unimplemented");
+    _tmp->Initialize(0);
+
+    InteriorIterator it = InteriorIterator(this->_geom);
+    for(it.First(); it.Valid(); it.Next()) {
+        real_t dudy = this->_u->dy_r(it);
+        real_t dvdx = this->_v->dx_r(it);
+        _tmp->Cell(it) = dudy - dvdx;
+    }
+
+    return _tmp;
 }
 /// Computes and returns the stream line values
 const Grid *Compute::GetStream() {
-    throw std::runtime_error("Unimplemented");
+    multi_real_t h = this->_geom->Mesh();
+
+    _tmp->Initialize(0);
+
+    real_t psi_offset = 0;
+
+    // compute lower row
+    BoundaryIterator bit = BoundaryIterator(this->_geom);
+    bit.SetBoundary(Boundary::Bottom);
+    bit.First();
+    _tmp->Cell(bit) = psi_offset;
+    for(bit.Next(); bit.Valid(); bit.Next()) {
+        _tmp->Cell(bit) = _tmp->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+    }
+
+    // compute left column
+    bit.SetBoundary(Boundary::Left);
+    bit.First();
+    for(bit.Next(); bit.Valid(); bit.Next()) {
+        _tmp->Cell(bit) = _tmp->Cell(bit.Down()) + this->_u->Cell(bit) * h[1];
+    }
+
+    // communicate all psi offsets through the grids
+    const multi_index_t grid_size = _tmp->getGeometry()->Size();
+    const index_t Nx = grid_size[0];
+    const index_t Ny = grid_size[1];
+    const index_t stride_y = Nx + 2;
+    const index_t stride_ry = this->_comm->ThreadDim()[0];
+    const index_t rowN = Ny*stride_y;
+    const int rank = this->_comm->getRank();
+
+
+    // prefix sum horizontally on the bottom processes
+    if (!this->_comm->isLeft() && this->_comm->isBottom()) {
+        real_t add_offset;
+        MPI_Recv(&add_offset, 1, MPI_REAL_T, rank - 1, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // recive left -> offset
+        // add offset from the left ...
+        psi_offset += add_offset;
+    }
+    if (!this->_comm->isRight() && this->_comm->isBottom()) {
+        // .. and send the sum to the right
+        real_t add_offset = psi_offset + _tmp->Data()[Nx];
+        MPI_Send(&add_offset, 1, MPI_REAL_T, rank + 1, 1, MPI_COMM_WORLD); // send offset -> right
+    }
+    // preix sum vertically TODO avoid second prefix sum by computing a x-sum on each process and send the y-offset of the left to all in the row
+    if (!this->_comm->isBottom()) {
+        real_t add_offset;
+        MPI_Recv(&add_offset, 1, MPI_REAL_T, rank - stride_ry, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE); // recive down -> offset
+        // add offset from below ...
+        psi_offset += add_offset;
+    }
+    if (!this->_comm->isTop()) {
+        // .. and send the sum to the top
+        real_t add_offset = psi_offset + _tmp->Data()[rowN];
+        MPI_Send(&add_offset, 1, MPI_REAL_T, rank + stride_ry, 1, MPI_COMM_WORLD); // send offset -> top
+    }
+
+    // compute lower row with correct offset
+    bit = BoundaryIterator(this->_geom);
+    bit.SetBoundary(Boundary::Bottom);
+    bit.First();
+    _tmp->Cell(bit) = psi_offset;
+    for(bit.Next(); bit.Valid(); bit.Next()) {
+        _tmp->Cell(bit) = _tmp->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+    }
+
+    // sum vertically
+    //Iterator it = Iterator(this->_geom, stride_y);
+    Iterator it = Iterator(this->_geom, stride_y);
+    for (; it.Valid(); it.Next()) {
+        _tmp->Cell(it) = _tmp->Cell(it.Down()) + this->_u->Cell(it) * h[1];
+    }
+
+    // TODO _tmp->_offset
+
+    return _tmp;
 }
 
 
