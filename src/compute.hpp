@@ -83,7 +83,9 @@ private:
   Grid *_rhs;
 
   // container for interpolating whichever values
-  Grid *_tmp;
+  Grid *_velocity;
+  Grid *_vorticity;
+  Grid *_stream;
 
   #ifdef RB_SOR
     RedOrBlackSOR *_solver;

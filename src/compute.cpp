@@ -60,7 +60,9 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     // right-hand side
     this->_rhs = new Grid(geom); // TODO same offset as p?
 
-    this->_tmp = new Grid(geom);
+    this->_velocity  = new Grid(geom);
+    this->_vorticity = new Grid(geom);
+    this->_stream    = new Grid(geom);
 
     #ifdef RB_SOR
         _solver = new RedOrBlackSOR(geom, param->Omega());
@@ -89,7 +91,9 @@ Compute::~Compute() {
     delete this->_F;
     delete this->_G;
     delete this->_rhs;
-    delete this->_tmp;
+    delete this->_velocity;
+    delete this->_vorticity;
+    delete this->_stream;
     delete this->_solver;
 }
 
@@ -199,29 +203,30 @@ const Grid *Compute::GetVelocity() {
     for (it.First(); it.Valid(); it.Next()) {
         real_t u = (this->_u->Cell(it) + this->_u->Cell(it.Left())) / 2.0;
         real_t v = (this->_v->Cell(it) + this->_v->Cell(it.Down())) / 2.0;
-		_tmp->Cell(it) = sqrt(u*u + v*v);
+		this->_velocity->Cell(it) = sqrt(u*u + v*v);
 	}
 
-    return _tmp;
+    return this->_velocity;
 }
 /// Computes and returns the vorticity
 const Grid *Compute::GetVorticity() {
-    _tmp->Initialize(0);
+    this->_vorticity->Initialize(0);
 
     InteriorIterator it = InteriorIterator(this->_geom);
     for(it.First(); it.Valid(); it.Next()) {
         real_t dudy = this->_u->dy_r(it);
         real_t dvdx = this->_v->dx_r(it);
-        _tmp->Cell(it) = dudy - dvdx;
+        this->_vorticity->Cell(it) = dudy - dvdx;
     }
 
-    return _tmp;
+    return this->_vorticity;
 }
 /// Computes and returns the stream line values
 const Grid *Compute::GetStream() {
     multi_real_t h = this->_geom->Mesh();
+    Grid* stream = this->_stream;
 
-    _tmp->Initialize(0);
+    stream->Initialize(0);
 
     real_t psi_offset = 0;
 
@@ -229,20 +234,20 @@ const Grid *Compute::GetStream() {
     BoundaryIterator bit = BoundaryIterator(this->_geom);
     bit.SetBoundary(Boundary::Bottom);
     bit.First();
-    _tmp->Cell(bit) = psi_offset;
+    stream->Cell(bit) = psi_offset;
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        _tmp->Cell(bit) = _tmp->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
     }
 
     // compute left column
     bit.SetBoundary(Boundary::Left);
     bit.First();
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        _tmp->Cell(bit) = _tmp->Cell(bit.Down()) + this->_u->Cell(bit) * h[1];
+        stream->Cell(bit) = stream->Cell(bit.Down()) + this->_u->Cell(bit) * h[1];
     }
 
     // communicate all psi offsets through the grids
-    const multi_index_t grid_size = _tmp->getGeometry()->Size();
+    const multi_index_t grid_size = stream->getGeometry()->Size();
     const index_t Nx = grid_size[0];
     const index_t Ny = grid_size[1];
     const index_t stride_y = Nx + 2;
@@ -260,7 +265,7 @@ const Grid *Compute::GetStream() {
     }
     if (!this->_comm->isRight() && this->_comm->isBottom()) {
         // .. and send the sum to the right
-        real_t add_offset = psi_offset + _tmp->Data()[Nx];
+        real_t add_offset = psi_offset + stream->Data()[Nx];
         MPI_Send(&add_offset, 1, MPI_REAL_T, rank + 1, 1, MPI_COMM_WORLD); // send offset -> right
     }
     // preix sum vertically TODO avoid second prefix sum by computing a x-sum on each process and send the y-offset of the left to all in the row
@@ -272,7 +277,7 @@ const Grid *Compute::GetStream() {
     }
     if (!this->_comm->isTop()) {
         // .. and send the sum to the top
-        real_t add_offset = psi_offset + _tmp->Data()[rowN];
+        real_t add_offset = psi_offset + stream->Data()[rowN];
         MPI_Send(&add_offset, 1, MPI_REAL_T, rank + stride_ry, 1, MPI_COMM_WORLD); // send offset -> top
     }
 
@@ -280,21 +285,19 @@ const Grid *Compute::GetStream() {
     bit = BoundaryIterator(this->_geom);
     bit.SetBoundary(Boundary::Bottom);
     bit.First();
-    _tmp->Cell(bit) = psi_offset;
+    stream->Cell(bit) = psi_offset;
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        _tmp->Cell(bit) = _tmp->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
     }
 
     // sum vertically
     //Iterator it = Iterator(this->_geom, stride_y);
     Iterator it = Iterator(this->_geom, stride_y);
     for (; it.Valid(); it.Next()) {
-        _tmp->Cell(it) = _tmp->Cell(it.Down()) + this->_u->Cell(it) * h[1];
+        stream->Cell(it) = stream->Cell(it.Down()) + this->_u->Cell(it) * h[1];
     }
 
-    // TODO _tmp->_offset
-
-    return _tmp;
+    return stream;
 }
 
 
