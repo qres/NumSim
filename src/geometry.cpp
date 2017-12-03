@@ -31,10 +31,35 @@ Geometry::Geometry(const Communicator *comm) :
 }
 
 void Geometry::split_for_comm() {
-    _bsize[0] = _size[0]/_comm->ThreadDim()[0];
-    _bsize[1] = _size[1]/_comm->ThreadDim()[1];
-    _blength[0] = _length[0]/_comm->ThreadDim()[0];
-    _blength[1] = _length[1]/_comm->ThreadDim()[1];
+
+    // n cells
+    // |_ n/p _| per p
+    // n % p left \in 0...p
+    // if .%. != 0: distribute the rest over the processes
+    index_t block_size_x = _size[0] / _comm->ThreadDim()[0];
+    if (_size[0] % _comm->ThreadDim()[0] != 0) {
+        block_size_x += 1;
+    }
+    index_t block_size_y = _size[1] / _comm->ThreadDim()[1];
+    if (_size[1] % _comm->ThreadDim()[1] != 0) {
+        block_size_y += 1;
+    }
+
+
+    if (this->_comm->isRight() && _size[0] % block_size_x != 0) {
+        _bsize[0] = _size[0] % block_size_x;
+        _blength[0] = _length[0] / _comm->ThreadDim()[0] * _bsize[0] / block_size_x;
+    } else {
+        _bsize[0] = _size[0] / _comm->ThreadDim()[0];
+        _blength[0] = _length[0] / _comm->ThreadDim()[0];
+    }
+    if (this->_comm->isTop() && _size[1] % block_size_y != 0) {
+        _bsize[1] = _size[1] % block_size_y;
+        _blength[1] = _length[1] / _comm->ThreadDim()[1] * _bsize[1] / block_size_y;
+    } else {
+        _bsize[1] = _size[1] / _comm->ThreadDim()[1];
+        _blength[1] = _length[1] / _comm->ThreadDim()[1];
+    }
 }
 
 /// \brief load geometry settings form file
