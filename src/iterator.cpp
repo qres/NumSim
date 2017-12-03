@@ -31,10 +31,8 @@ multi_index_t Iterator::Pos() const {
     multi_index_t size = this->_geom->Size();
     size_t ix = this->Value() % (size[0] + 2); //x-minor
     size_t jy = this->Value() / (size[0] + 2); //y-major
-    
-    //multi_real_t offset = this->_geom->_offset; // TODO if we cannot access this here... whats the offset for?
-    multi_real_t h = this->_geom->Mesh();
-    return multi_index_t(/*offset[0] + */ix * h[0], /*offset[1] + */jy * h[1]);
+
+    return multi_index_t(ix, jy);
 }
 
 /// Sets the iterator to the first element
@@ -113,7 +111,7 @@ Iterator Iterator::Top() const {
 }
 
 InteriorIterator::InteriorIterator(const Geometry *geom) : Iterator(geom) {
-    
+
 }
 
 /// Sets the iterator to the first element
@@ -217,4 +215,3 @@ void BoundaryIterator::Next() {
         throw std::runtime_error("Unreachable");
     }
 }
-
