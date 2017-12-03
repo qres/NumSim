@@ -19,6 +19,12 @@
 //------------------------------------------------------------------------------
 #ifndef __COMPUTE_HPP
 #define __COMPUTE_HPP
+
+
+// use Red-Black-SOR
+#define RB_SOR
+
+
 //------------------------------------------------------------------------------
 class Compute {
 public:
@@ -79,7 +85,11 @@ private:
   // container for interpolating whichever values
   Grid *_tmp;
 
-  Solver *_solver;
+  #ifdef RB_SOR
+    RedOrBlackSOR *_solver;
+  #else
+    Solver *_solver;
+  #endif
 
   const Geometry *_geom;
   const Parameter *_param;

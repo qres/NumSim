@@ -39,11 +39,10 @@ SOR::~SOR() {
 
 }
 
-
-real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
-    InteriorIterator it(this->_geom);
-    real_t omega = this->_omega;
-    multi_real_t h = this->_geom->Mesh();
+template<bool red, bool black>
+void solve_SOR(const Geometry* geom, real_t omega, Grid *p, const Grid *rhs) {
+    InteriorIterator it(geom);
+    multi_real_t h = geom->Mesh();
     if (omega <= 0.0) {
         if (h[0] == h[1]) {
             // choose optimal omega for poisson with hx = hy
@@ -54,25 +53,36 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     }
 
     for(it.First(); it.Valid(); it.Next()) {
-        real_t p_ij = p->Cell(it);
-        real_t p_im1j = p->Cell(it.Left());
-        real_t p_ip1j = p->Cell(it.Right());
-        real_t p_ijm1 = p->Cell(it.Down());
-        real_t p_ijp1 = p->Cell(it.Top());
-        real_t rhs_ij = rhs->Cell(it);
+        multi_index_t ix_ij = it.Pos();
+        bool even = (ix_ij[0] + ix_ij[1]) % 2 == 0;
 
-        real_t dxsq = h[0] * h[0];
-        real_t dysq = h[1] * h[1];
+        if ((even && red) || (!even && black)) {
+            real_t p_ij = p->Cell(it);
+            real_t p_im1j = p->Cell(it.Left());
+            real_t p_ip1j = p->Cell(it.Right());
+            real_t p_ijm1 = p->Cell(it.Down());
+            real_t p_ijp1 = p->Cell(it.Top());
+            real_t rhs_ij = rhs->Cell(it);
 
-        p->Cell(it) = 
-            (1 - omega) * p_ij + 
-            omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
-                (p_im1j + p_ip1j) / dxsq +
-                (p_ijm1 + p_ijp1) / dysq +
-                -rhs_ij
-        );
+            real_t dxsq = h[0] * h[0];
+            real_t dysq = h[1] * h[1];
+
+            p->Cell(it) =
+                (1 - omega) * p_ij +
+                omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
+                    (p_im1j + p_ip1j) / dxsq +
+                    (p_ijm1 + p_ijp1) / dysq +
+                    -rhs_ij
+            );
+        }
     }
+}
 
+real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
+    solve_SOR<true,true>(this->_geom, this->_omega, p, rhs);
+
+    InteriorIterator it(this->_geom);
+    multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
     for(it.First(); it.Valid(); it.Next()) {
@@ -83,4 +93,48 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     res = sqrt(res);
 
     return res;
+}
+
+
+RedOrBlackSOR::RedOrBlackSOR(const Geometry *geom, const real_t &omega) : SOR(geom, omega) {
+
+}
+
+RedOrBlackSOR::~RedOrBlackSOR() {
+
+}
+
+real_t RedOrBlackSOR::RedCycle(Grid *p, const Grid *rhs) const {
+    solve_SOR<false,true>(this->_geom, this->_omega, p, rhs);
+
+    InteriorIterator it(this->_geom);
+    multi_real_t h = this->_geom->Mesh();
+    // compute residual
+    real_t res = 0;
+    for(it.First(); it.Valid(); it.Next()) {
+        real_t loc = localRes(it, p, rhs);
+        res += loc*loc;
+    }
+    res *= h[0] * h[1];
+    res = sqrt(res);
+
+    return res;
+}
+
+real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
+    solve_SOR<true,false>(this->_geom, this->_omega, p, rhs);
+
+    InteriorIterator it(this->_geom);
+    multi_real_t h = this->_geom->Mesh();
+    // compute residual
+    real_t res = 0;
+    for(it.First(); it.Valid(); it.Next()) {
+        real_t loc = localRes(it, p, rhs);
+        res += loc*loc;
+    }
+    res *= h[0] * h[1];
+    res = sqrt(res);
+
+    return res;
+
 }

@@ -62,7 +62,11 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
 
     this->_tmp = new Grid(geom);
 
-    _solver = new SOR(geom, param->Omega());
+    #ifdef RB_SOR
+        _solver = new RedOrBlackSOR(geom, param->Omega());
+    #else
+        _solver = new SOR(geom, param->Omega());
+    #endif
 
     this->_geom = geom;
     this->_param = param;
@@ -128,8 +132,24 @@ void Compute::TimeStep(bool printInfo) {
     index_t iter = 0;
 
     while (res > this->_epslimit && iter < this->_param->IterMax()) {
-        res = this->_solver->Cycle(this->_p, this->_rhs);
-        this->_comm->copyBoundary(this->_p);
+        #ifdef RB_SOR
+            // proper red-black-SOR
+            if (this->_comm->EvenOdd()) {
+                res = this->_solver->RedCycle(this->_p, this->_rhs);
+                this->_comm->copyBoundary(this->_p);
+                res = this->_solver->BlackCycle(this->_p, this->_rhs);
+                this->_comm->copyBoundary(this->_p);
+            } else {
+                res = this->_solver->BlackCycle(this->_p, this->_rhs);
+                this->_comm->copyBoundary(this->_p);
+                res = this->_solver->RedCycle(this->_p, this->_rhs);
+                this->_comm->copyBoundary(this->_p);
+            }
+        #else
+            // Block-Jackobi style SOR: each grid solvs SOR with old boundary values
+            res = this->_solver->Cycle(this->_p, this->_rhs);
+            this->_comm->copyBoundary(this->_p);
+        #endif
         res = this->_comm->gatherSum(res*res); // undo sqrt in norm sum up squared terms
         res = sqrt(res);                       // redo sqrt to get 2-norm
         iter++;

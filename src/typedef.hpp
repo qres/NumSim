@@ -95,6 +95,7 @@ class Geometry;
 class Grid;
 class Parameter;
 class Solver;
+class RedOrBlackSOR;
 class Compute;
 
 #endif // __TYPEDEF_HPP
