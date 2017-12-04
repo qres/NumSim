@@ -14,6 +14,7 @@ Communicator::Communicator(int *argc, char ***argv) {
     this->_tdim = multi_index_t(1,1);
     this->_tidx = multi_index_t(_rank % this->_tdim[0], _rank / this->_tdim[0]);
     this->_evenodd = (_tidx[0] + _tidx[1]) % 2 == 0;
+    this->_comm_boundary = CommBoundary::Swap;
 }
 
 void Communicator::opt_geom(Geometry* geom) {
@@ -148,10 +149,7 @@ void Communicator::copyBoundary(Grid *grid) const {
             swap the uneven-even boundary horizontally
             swap the uneven-even boundary vertically
     */
-    const bool BOUNDARY_SWEEP = true;
-    const bool BOUNDARY_SWAP  = !BOUNDARY_SWEEP;
-
-    if (BOUNDARY_SWEEP) {
+    if (this->_comm_boundary == CommBoundary::Sweep) {
         if (ThreadDim()[0] > 1) {
             // copy to the right, copy to the left
             if (isLeft()) {
@@ -210,39 +208,79 @@ void Communicator::copyBoundary(Grid *grid) const {
                 );
             }
         }
-    } else if (BOUNDARY_SWAP) {
+    } else if (this->_comm_boundary == CommBoundary::Swap) {
+        const multi_index_t thread_dim = ThreadDim();
+        const bool even_x = thread_dim[0] % 2 == 0;
+        const bool even_y = thread_dim[1] % 2 == 0;
+        const index_t stride_y = grid_size[0] + 2;
+        const index_t stride_ry = ThreadDim()[0];
+        const index_t row0   = 0;
+        const index_t row1   = stride_y;
+        const index_t rowN   = Ny*stride_y;
+        const index_t rowNp1 = (Ny+1)*stride_y;
+
         // swap right side of Even and top of Even
-        /*if (EvenOdd()) {
-            if (!isRight()) {
-                send N-1 -> right, recive right -> N
-            }
-            if (!isTop()) {
-                send N-1 -> top, recive top -> N
-            }
-        } else {
-            if (!isLeft()) {
-                send 1 -> left, recive left -> 0
-            }
-            if (!isBottom()) {
-                send 1 -> down, recive down -> 0
-            }
+        if (even_x && !isRight()) {
+            MPI_Sendrecv(
+                &data[Nx],   1, grid_col, getRank() + 1, 1, // send N -> right
+                &data[Nx+1], 1, grid_col, getRank() + 1, 1, // recive right -> N+1
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        } else if (!isLeft()) {
+            MPI_Sendrecv(
+                &data[1], 1, grid_col, getRank() - 1, 1, // send 1 -> left
+                &data[0], 1, grid_col, getRank() - 1, 1, // recive left -> 0
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        }
+        if (even_y && !isTop()) {
+            MPI_Sendrecv(
+                &data[rowN],   1, grid_row, getRank() + stride_ry, 1, // send N -> top
+                &data[rowNp1], 1, grid_row, getRank() + stride_ry, 1, // recive top -> N+1
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        } else if(!isBottom()) {
+            MPI_Sendrecv(
+                &data[row1], 1, grid_row, getRank() - stride_ry, 1, // send 1 -> down
+                &data[row0], 1, grid_row, getRank() - stride_ry, 1, // recive down -> 0
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
         }
         // swap left side of Even and down of Even
-        if (EvenOdd()) {
-            if (!isLeft()) {
-                send 1 -> left, recive left -> 0
-            }
-            if (!isBottom()) {
-                send 1 -> down, recive down -> 0
-            }
-        } else (!EvenOdd() && !isRight() {
-            if (!isRight()) {
-                send N-1 -> right, recive right -> N
-            }
-            if (!isTop()) {
-                send N-1 -> top, recive top -> N
-            }
-        }*/
+        if (even_x && !isLeft()) {
+            MPI_Sendrecv(
+                &data[1], 1, grid_col, getRank() - 1, 1, // send 1 -> left
+                &data[0], 1, grid_col, getRank() - 1, 1, // recive left -> 0
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        } else if (!isRight()) {
+            MPI_Sendrecv(
+                &data[Nx],   1, grid_col, getRank() + 1, 1, // send N -> right
+                &data[Nx+1], 1, grid_col, getRank() + 1, 1, // recive right -> N+1
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        }
+        if (even_y && !isBottom()) {
+            MPI_Sendrecv(
+                &data[row1], 1, grid_row, getRank() - stride_ry, 1, // send 1 -> down
+                &data[row0], 1, grid_row, getRank() - stride_ry, 1, // recive down -> 0
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        } else if (!isTop()) {
+            MPI_Sendrecv(
+                &data[rowN],   1, grid_row, getRank() + stride_ry, 1, // send N -> top
+                &data[rowNp1], 1, grid_row, getRank() + stride_ry, 1, // recive top -> N+1
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE
+            );
+        }
     } else {
         std::cout << "ERR: no boundary excange defined" << std::endl;
     }

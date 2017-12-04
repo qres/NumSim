@@ -22,6 +22,14 @@
 #ifndef __COMMUNICATOR_HPP
 #define __COMMUNICATOR_HPP
 //------------------------------------------------------------------------------
+
+namespace CommBoundary {
+    enum CommBoundary {
+        Sweep,
+        Swap
+    };
+}
+
 class Communicator {
 public:
   /** Communicator constructor; initializes MPI Environment
@@ -38,6 +46,10 @@ public:
   /** Communicator destructor; finalizes MPI Environment
    */
   ~Communicator();
+
+  void set_boundary_comm(CommBoundary::CommBoundary comm) {
+      this->_comm_boundary = comm;
+  }
 
   /** Returns the position of the current process with respect to the
    *  fields lower left corner
@@ -113,6 +125,8 @@ private:
   int _rank;
   int _size;
   bool _evenodd;
+  CommBoundary::CommBoundary _comm_boundary; // boundary communication algorithm
+
 
   /** Function to sync ghost layer on left boundary:
    *  send values of own left boundary to left neighbor and
