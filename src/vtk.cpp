@@ -145,7 +145,7 @@ void VTK::Init(const char *path) {
     fprintf(
         _masterHandle,
         "<PRectilinearGrid WholeExtent=\"0 %i 0 %i 0 %i\" GhostLevel=\"0\">\n",
-        _globalFieldSize[0] - 2, _globalFieldSize[1] - 2,
+        _globalFieldSize[0] - 2 - 1, _globalFieldSize[1] - 2 - 1,
         (DIM == 3 ? _globalFieldSize[2] - 2 : 0));
 
     // announce arrays in 3 dimensions

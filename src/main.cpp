@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
   // Create a VTK generator
   // use offset as the domain shift
   multi_real_t offset;
-  offset[0] = comm.ThreadIdx()[0] * (geom.Mesh()[0] * (double)(geom.Size()[0] - 2));
-  offset[1] = comm.ThreadIdx()[1] * (geom.Mesh()[1] * (double)(geom.Size()[1] - 2));
+  offset[0] = comm.ThreadIdx()[0] * (geom.Mesh()[0] * (double)(geom.Size()[0]));
+  offset[1] = comm.ThreadIdx()[1] * (geom.Mesh()[1] * (double)(geom.Size()[1]));
   VTK vtk(geom.Mesh(), geom.Length(), geom.TotalLength(), offset, comm.getRank(),
           comm.getSize(), comm.ThreadDim());
 #endif
@@ -125,6 +125,8 @@ int main(int argc, char **argv) {
     vtk.SwitchToPointData();
     vtk.AddPointField("Velocity", comp.GetU(), comp.GetV());
     vtk.AddPointScalar("Pressure", comp.GetP());
+    vtk.AddPointScalar("Vorticity", comp.GetVorticity());
+    vtk.AddPointScalar("StreamLines", comp.GetStream());
     vtk.Finish();
 #endif
 
