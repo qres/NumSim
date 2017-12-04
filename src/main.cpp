@@ -133,12 +133,11 @@ int main(int argc, char **argv) {
 
     // Run a few steps
     for (uint32_t i = 0; i < 9; ++i) {
-      comp.TimeStep(false);
+      comp.TimeStep(false, iter);
       iter++;
     }
     bool printOnlyOnMaster = !comm.getRank();
-    if (printOnlyOnMaster) std::cout << "Iteration: " << iter << " ";
-    comp.TimeStep(printOnlyOnMaster);
+    comp.TimeStep(printOnlyOnMaster, iter);
     iter++;
   }
   return 0;

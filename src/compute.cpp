@@ -100,7 +100,7 @@ Compute::~Compute() {
 /// Execute one time step of the fluid simulation (with or without debug info)
 // @ param printInfo print information about current solver state (residual
 // etc.)
-void Compute::TimeStep(bool printInfo) {
+void Compute::TimeStep(bool printInfo, uint32_t timestep) {
     // update boundaries -- in no specific order
     this->_geom->Update_U(this->_u);
     this->_geom->Update_V(this->_v);
@@ -168,7 +168,7 @@ void Compute::TimeStep(bool printInfo) {
     this->_t += dt;
 
     if (printInfo) {
-        std::cout << "[t=" << this->_t << "] Solved poisson eq in " << iter << " iterations and final residual of " << res << std::endl;
+        std::cout << "Iteration: " << timestep << " " << "[t=" << this->_t << "] Solved poisson eq in " << iter << " iterations and final residual of " << res << std::endl;
     }
 
 }
