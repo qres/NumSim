@@ -27,8 +27,8 @@ const char States[][42] = {
     "U",        // 1
     "V",        // 2
     "P",        // 3
-    "",         // 4
-    "",         // 5
+    "Vorticity",// 4
+    "Stream Lines",// 5
     "",         // 6
     "",         // 7
     "",         // 8
