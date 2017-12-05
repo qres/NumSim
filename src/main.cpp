@@ -33,6 +33,7 @@
 int main(int argc, char **argv) {
   // Create parameter and geometry instances with default values
   Communicator comm(&argc, &argv);
+  comm.set_boundary_comm(CommBoundary::Sweep);
   Parameter param;
   Geometry geom(&comm);
   if (argc >= 2) {
