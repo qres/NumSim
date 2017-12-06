@@ -61,8 +61,8 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     this->_rhs = new Grid(geom); // TODO same offset as p?
 
     this->_velocity  = new Grid(geom);
-    this->_vorticity = new Grid(geom);
-    this->_stream    = new Grid(geom);
+    this->_vorticity = new Grid(geom, multi_real_t(h[0], h[1]));
+    this->_stream    = new Grid(geom, multi_real_t(h[0], h[1]));
 
     #ifdef RB_SOR
         _solver = new RedOrBlackSOR(geom, param->Omega());
