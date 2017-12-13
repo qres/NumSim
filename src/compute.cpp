@@ -335,7 +335,7 @@ void Compute::NewVelocities(const real_t &dt) {
 
     for (it.First(); it.Valid(); it.Next()) {
         // u_m+1 = F_n - dt dpdx_n+1
-        real_t dpdx = this->_p->dx_r(it); // expect right right
+        real_t dpdx = this->_p->dx_r(it);
         real_t F    = this->_F->Cell(it);
         this->_u->Cell(it) = F - dt * dpdx;
 
@@ -356,7 +356,7 @@ void Compute::RHS(const real_t &dt) {
     InteriorIterator it (this->_geom);
     for (it.First(); it.Valid(); it.Next()) {
         this->_rhs->Cell(it) = 1.0/dt *(
-            this->_F->dx_l(it) + // expect left left
+            this->_F->dx_l(it) +
             this->_G->dy_l(it)
         );
     }
