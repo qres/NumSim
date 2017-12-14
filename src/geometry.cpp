@@ -71,11 +71,11 @@ void Geometry::Load(const char *file) {
         if (param == "size") {
             fin >> this->_size[0] >> this->_size[1];
             this->_h[0] = this->_length[0] / (this->_size[0] + 1);
-            this->_h[1] = this->_length[0] / (this->_size[1] + 1);
+            this->_h[1] = this->_length[1] / (this->_size[1] + 1);
         } else if (param == "length") {
             fin >> this->_length[0] >> this->_length[1];
             this->_h[0] = this->_length[0] / (this->_size[0] + 1);
-            this->_h[1] = this->_length[0] / (this->_size[1] + 1);
+            this->_h[1] = this->_length[1] / (this->_size[1] + 1);
         } else if (param == "velocity") {
             fin >> this->_velocity[0] >> this->_velocity[1];
         } else if (param == "pressure") {
