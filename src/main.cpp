@@ -27,7 +27,7 @@
 #include <iostream>
 #include <sys/stat.h>
 
-#undef USE_DEBUG_VISU
+//#undef USE_DEBUG_VISU
 //#define NO_VTK
 
 int main(int argc, char **argv) {

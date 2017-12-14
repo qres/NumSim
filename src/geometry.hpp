@@ -16,6 +16,7 @@
  */
 
 #include "typedef.hpp"
+#include "flaggrid.hpp"
 //------------------------------------------------------------------------------
 #ifndef __GEOMETRY_HPP
 #define __GEOMETRY_HPP
@@ -38,6 +39,8 @@ public:
   Geometry();
   Geometry(const Communicator *comm);
 
+  ~Geometry();
+
   /// Loads a geometry from a file
   void Load(const char *file);
 
@@ -54,6 +57,9 @@ public:
   const multi_real_t &TotalLength() const;
   /// Returns the meshwidth
   const multi_real_t &Mesh() const;
+
+  const FlagGrid &Flags() const;
+  FlagGrid &Flags();
 
   /// Updates the velocity field u boundaries
   void Update_U(Grid *u) const;
@@ -73,6 +79,8 @@ private:
 
   multi_real_t _velocity;
   real_t _pressure;
+
+  FlagGrid *_flags;
 };
 //------------------------------------------------------------------------------
 #endif // __GEOMETRY_HPP

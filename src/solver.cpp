@@ -5,6 +5,7 @@
 #include "parameter.hpp"
 #include "solver.hpp"
 #include "typedef.hpp"
+#include "flaggrid.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -53,27 +54,29 @@ void solve_SOR(const Geometry* geom, real_t omega, Grid *p, const Grid *rhs) {
     }
 
     for(it.First(); it.Valid(); it.Next()) {
-        multi_index_t ix_ij = it.Pos();
-        bool even = (ix_ij[0] + ix_ij[1]) % 2 == 0;
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            multi_index_t ix_ij = it.Pos();
+            bool even = (ix_ij[0] + ix_ij[1]) % 2 == 0;
 
-        if ((even && red) || (!even && black)) {
-            real_t p_ij = p->Cell(it);
-            real_t p_im1j = p->Cell(it.Left());
-            real_t p_ip1j = p->Cell(it.Right());
-            real_t p_ijm1 = p->Cell(it.Down());
-            real_t p_ijp1 = p->Cell(it.Top());
-            real_t rhs_ij = rhs->Cell(it);
+            if ((even && red) || (!even && black)) {
+                real_t p_ij = p->Cell(it);
+                real_t p_im1j = p->Cell(it.Left());
+                real_t p_ip1j = p->Cell(it.Right());
+                real_t p_ijm1 = p->Cell(it.Down());
+                real_t p_ijp1 = p->Cell(it.Top());
+                real_t rhs_ij = rhs->Cell(it);
 
-            real_t dxsq = h[0] * h[0];
-            real_t dysq = h[1] * h[1];
+                real_t dxsq = h[0] * h[0];
+                real_t dysq = h[1] * h[1];
 
-            p->Cell(it) =
-                (1 - omega) * p_ij +
-                omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
-                    (p_im1j + p_ip1j) / dxsq +
-                    (p_ijm1 + p_ijp1) / dysq +
-                    -rhs_ij
-            );
+                p->Cell(it) =
+                    (1 - omega) * p_ij +
+                    omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
+                        (p_im1j + p_ip1j) / dxsq +
+                        (p_ijm1 + p_ijp1) / dysq +
+                        -rhs_ij
+                );
+            }
         }
     }
 }
@@ -85,11 +88,15 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
+    index_t count = 0;
     for(it.First(); it.Valid(); it.Next()) {
-        real_t loc = localRes(it, p, rhs);
-        res += loc*loc;
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            real_t loc = localRes(it, p, rhs);
+            res += loc*loc;
+            count++;
+        }
     }
-    res *= h[0] * h[1];
+    res /= count;
     res = sqrt(res);
 
     return res;
@@ -111,11 +118,15 @@ real_t RedOrBlackSOR::RedCycle(Grid *p, const Grid *rhs) const {
     multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
+    index_t count = 0;
     for(it.First(); it.Valid(); it.Next()) {
-        real_t loc = localRes(it, p, rhs);
-        res += loc*loc;
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            real_t loc = localRes(it, p, rhs);
+            res += loc*loc;
+            count++;
+        }
     }
-    res *= h[0] * h[1];
+    res /= count;
     res = sqrt(res);
 
     return res;
@@ -128,11 +139,14 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
     multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
+    index_t count = 0;
     for(it.First(); it.Valid(); it.Next()) {
-        real_t loc = localRes(it, p, rhs);
-        res += loc*loc;
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            real_t loc = localRes(it, p, rhs);
+            res += loc*loc;
+        }
     }
-    res *= h[0] * h[1];
+    res /= count;
     res = sqrt(res);
 
     return res;

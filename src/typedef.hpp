@@ -93,6 +93,7 @@ class Iterator;
 class Communicator;
 class Geometry;
 class Grid;
+//class FlagGrid;
 class Parameter;
 class Solver;
 class RedOrBlackSOR;

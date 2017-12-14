@@ -334,14 +334,18 @@ void Compute::NewVelocities(const real_t &dt) {
     InteriorIterator it = InteriorIterator(this->_geom);
 
     for (it.First(); it.Valid(); it.Next()) {
-        // u_m+1 = F_n - dt dpdx_n+1
-        real_t dpdx = this->_p->dx_r(it);
-        real_t F    = this->_F->Cell(it);
-        this->_u->Cell(it) = F - dt * dpdx;
+        if (this->_u->getGeometry()->Flags().Cell(it) == Flags::Fluid && this->_u->getGeometry()->Flags().Cell(it.Right()) == Flags::Fluid) {
+            // u_m+1 = F_n - dt dpdx_n+1
+            real_t dpdx = this->_p->dx_r(it);
+            real_t F    = this->_F->Cell(it);
+            this->_u->Cell(it) = F - dt * dpdx;
+        }
 
-        real_t dpdy = this->_p->dy_r(it);
-        real_t G    = this->_G->Cell(it);
-        this->_v->Cell(it) = G - dt * dpdy;
+        if (this->_v->getGeometry()->Flags().Cell(it) == Flags::Fluid && this->_v->getGeometry()->Flags().Cell(it.Top()) == Flags::Fluid) {
+            real_t dpdy = this->_p->dy_r(it);
+            real_t G    = this->_G->Cell(it);
+            this->_v->Cell(it) = G - dt * dpdy;
+        }
     }
 }
 
