@@ -23,6 +23,7 @@
 #include "parameter.hpp"
 #include "visu.hpp"
 #include "vtk.hpp"
+#include "particle.hpp"
 
 #include <iostream>
 #include <sys/stat.h>
@@ -129,6 +130,8 @@ int main(int argc, char **argv) {
     vtk.AddPointScalar("Vorticity", comp.GetVorticity());
     vtk.AddPointScalar("StreamLines", comp.GetStream());
     vtk.Finish();
+    comp.GetPathLine()->SaveVTK(comm.getRank(), comm.getSize(), "VTK/path_line", iter);
+    comp.GetStreakLine()->SaveVTK(comm.getRank(), comm.getSize(), "VTK/streak_line", iter);
 #endif
 
     // Run a few steps

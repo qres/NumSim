@@ -6,6 +6,7 @@
 #include "solver.hpp"
 #include "typedef.hpp"
 #include "communicator.hpp"
+#include "particle.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -81,6 +82,9 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     this->_rhs->Initialize(0);
     this->_F->Initialize(0);
     this->_G->Initialize(0);
+
+    this->_streak_line = new StreakLine(multi_real_t(0.8, 0.8));
+    this->_path_line = new PathLine(multi_real_t(0.8, 0.8));
 }
 
 /// Deletes all grids
@@ -95,6 +99,8 @@ Compute::~Compute() {
     delete this->_vorticity;
     delete this->_stream;
     delete this->_solver;
+    delete this->_streak_line;
+    delete this->_path_line;
 }
 
 /// Execute one time step of the fluid simulation (with or without debug info)
@@ -163,6 +169,9 @@ void Compute::TimeStep(bool printInfo, uint32_t timestep) {
     this->NewVelocities(dt);
     this->_comm->copyBoundary(this->_u);
     this->_comm->copyBoundary(this->_v);
+
+    this->_streak_line->TimeStep(dt, this->_u, this->_v);
+    this->_path_line->TimeStep(dt, this->_u, this->_v);
 
     // increment simulated time
     this->_t += dt;
@@ -298,6 +307,15 @@ const Grid *Compute::GetStream() {
     }
 
     return stream;
+}
+
+
+const StreakLine *Compute::GetStreakLine() const {
+    return this->_streak_line;
+}
+
+const PathLine *Compute::GetPathLine() const {
+    return this->_path_line;
 }
 
 

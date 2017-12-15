@@ -98,5 +98,8 @@ class Parameter;
 class Solver;
 class RedOrBlackSOR;
 class Compute;
+class ParticleLine;
+class StreakLine;
+class PathLine;
 
 #endif // __TYPEDEF_HPP

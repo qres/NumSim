@@ -19,6 +19,61 @@
 #include "geometry.hpp"
 #include "grid.hpp"
 #include <stdio.h>
+
+Particle::Particle (const multi_real_t& pos) {
+    this->_pos = pos;
+}
+
+Particle::~Particle () {
+
+}
+
+void Particle::TimeStep(const real_t& dt, const Grid* u, const Grid* v) {
+    real_t uu = u->Interpolate(this->Pos());
+    real_t vv = v->Interpolate(this->Pos());
+    this->_pos[0] += dt * uu;
+    this->_pos[1] += dt * vv;
+}
+
+const multi_real_t& Particle::Pos () const {
+    return this->_pos;
+}
+
+ParticleLine::ParticleLine(): _part() {
+
+}
+
+PathLine::PathLine(const multi_real_t& pos) {
+    this->_part.push_back(Particle(pos));
+
+}
+
+PathLine::~PathLine() {
+
+}
+
+void PathLine::TimeStep(const real_t& dt, const Grid* u, const Grid* v) {
+    Particle last = this->_part.back();
+    last.TimeStep(dt, u, v);
+    this->_part.push_back(last);
+}
+
+StreakLine::StreakLine(const multi_real_t& pos) {
+    this->_part.push_back(Particle(pos));
+    this->_org = pos;
+}
+
+StreakLine::~StreakLine() {
+
+}
+
+void StreakLine::TimeStep(const real_t& dt, const Grid* u, const Grid* v) {
+    for (Particle& particle : this->_part) {
+        particle.TimeStep(dt, u, v);
+    }
+    this->_part.push_back(Particle(this->_org));
+}
+
 //------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
@@ -28,7 +83,7 @@ void ParticleLine::SaveVTK (const index_t& rank, const index_t& nump, const char
   for (int i = 0; basename[i] != 0; ++i) {
     if (basename[i] == '/') filebase = &basename[i+1];
     if (basename[i] == '\\') filebase = &basename[i+1];
-  } 
+  }
   if (rank == 0) {
     sprintf(fname, "%s_%05i.pvtp", basename, idx);
     FILE *handle = fopen(fname, "w");
@@ -73,4 +128,3 @@ void ParticleLine::SaveVTK (const index_t& rank, const index_t& nump, const char
   fclose(handle);
 }
 //------------------------------------------------------------------------------
-

@@ -58,6 +58,9 @@ public:
   /// Computes and returns the stream line values
   const Grid *GetStream();
 
+  const StreakLine *GetStreakLine() const;
+  const PathLine *GetPathLine() const;
+
 private:
   // current timestep
   real_t _t;
@@ -86,6 +89,9 @@ private:
   Grid *_velocity;
   Grid *_vorticity;
   Grid *_stream;
+
+  StreakLine *_streak_line;
+  PathLine *_path_line;
 
   #ifdef RB_SOR
     RedOrBlackSOR *_solver;
