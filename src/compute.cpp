@@ -83,8 +83,8 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     this->_F->Initialize(0);
     this->_G->Initialize(0);
 
-    this->_streak_line = new StreakLine(multi_real_t(0.8, 0.8));
-    this->_path_line = new PathLine(multi_real_t(0.8, 0.8));
+    this->_streak_line = new StreakLine(multi_real_t(0.1, 0.7));
+    this->_path_line = new PathLine(multi_real_t(0.1, 0.7));
 }
 
 /// Deletes all grids
