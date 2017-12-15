@@ -28,7 +28,9 @@ namespace BoundaryOrientation {
         Corner_tr = 0b10011,
         Corner_bl = 0b11100,
         Corner_br = 0b11010,
-        Interior  = 0b10000
+        Interior  = 0b10000,
+        Mask_ori  = 0b01111,
+        Mask_fluid= 0b10000
     };
 }
 

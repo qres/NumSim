@@ -189,45 +189,73 @@ void Geometry::Update_U(Grid *u) const {
             // nothing to do
             continue; break; // :P
         case Flags::Noslip:
+        case Flags::SlipVertical:
             // set u to zero
-            if (b_ori & BoundaryOrientation::Vert_l) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 // global left boundary => left.flag = self.flag => ori != vert_l -> OK
                 // left = fluid => we have to set the left boundary
                 // left = boundary => it doesent matter what we do...
                 u->Cell(it.Left()) = 0.0;
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 u->Cell(it) = 0.0;
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 u->Cell(it) = -u->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Horiz_b) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 u->Cell(it) = -u->Cell(it.Down());
             }
             break;
         case Flags::Inflow:
         case Flags::InflowHorizontal:
-        case Flags::InflowVertical: // TODO parabolo
-        case Flags::SlipHorizontal: // TODO parabola?
-            if (b_ori & BoundaryOrientation::Vert_l) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 u->Cell(it.Left()) = this->_velocity[0];
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 u->Cell(it) = this->_velocity[0];
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 u->Cell(it) = 2 * this->_velocity[0] - u->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Horiz_b) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 u->Cell(it) = 2 * this->_velocity[0] - u->Cell(it.Down());
             }
             break;
+        case Flags::InflowVertical:
+        case Flags::SlipHorizontal:
+            {
+                // parabola on u
+                if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t || b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
+                    std::cout << "ERR: InflowVertical or SlipHorizontal with Horizontal boundary" << std::endl;
+                }
+                index_t count_up = 0;
+                index_t count_down = 0;
+                Iterator vertical (this, it.Value());
+                for (; vertical.Top().Value() != vertical.Value() && this->Flags().Cell(vertical.Top()) == b_type; vertical = vertical.Top()) {
+                    count_up++;
+                }
+                vertical = Iterator (this, it.Value());
+                for (; vertical.Down().Value() != vertical.Value() && this->Flags().Cell(vertical.Down()) == b_type; vertical = vertical.Down()) {
+                    count_down++;
+                }
+                index_t count = count_up + 1 + count_down;
+
+                real_t length = count + 1;
+                real_t y = count_up + 1;
+                //-length/2 * (length/2 - length) = length^2/4
+                real_t value = - y * (y - length) / (length*length / 4.0) * this->_velocity[0];
+                // parabola / normalize_to_1 * scale to speed
+
+                // orientation is vertical left or vertical right
+                u->Cell(it) = value;
+            }
+            break;
+
         case Flags::Outflow:
-        case Flags::SlipVertical:
             // d/dn (u v)^T = 0
-            if (b_ori & BoundaryOrientation::Vert_l) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 u->Cell(it.Left()) = u->Cell(it.Left().Left());
                 u->Cell(it)        = u->Cell(it.Left().Left()); // nice picture
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 u->Cell(it) = u->Cell(it.Right());
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 u->Cell(it) = 2 * u->Cell(it.Top()) - u->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Horiz_b) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 u->Cell(it) = 2 * u->Cell(it.Down()) - u->Cell(it.Down());
             }
             break;
@@ -247,42 +275,70 @@ void Geometry::Update_V(Grid *v) const {
             // nothing to do
             continue; break; // :P
         case Flags::Noslip:
+        case Flags::SlipHorizontal:
             // set v to zero
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 v->Cell(it.Down()) = 0.0;
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 v->Cell(it) = 0.0;
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 v->Cell(it) = -v->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 v->Cell(it) = -v->Cell(it.Right());
             }
             break;
         case Flags::Inflow:
-        case Flags::InflowHorizontal: // TODO parabola
         case Flags::InflowVertical:
-        case Flags::SlipVertical: // TODO parabola?
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 v->Cell(it.Down()) = this->_velocity[1];
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 v->Cell(it) = this->_velocity[1];
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 v->Cell(it) = 2 * this->_velocity[1] - v->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 v->Cell(it) = 2 * this->_velocity[1] - v->Cell(it.Right());
             }
             break;
+        case Flags::InflowHorizontal:
+        case Flags::SlipVertical:
+            {
+                // parabola on u
+                if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l || b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
+                    std::cout << "ERR: InflowHorizontal or SlipVertical with vertical boundary" << std::endl;
+                }
+                index_t count_left = 0;
+                index_t count_right = 0;
+                Iterator horizontal (this, it.Value());
+                for (; horizontal.Left().Value() != horizontal.Value() && this->Flags().Cell(horizontal.Left()) == b_type; horizontal = horizontal.Left()) {
+                    count_left++;
+                }
+                horizontal = Iterator(this, it.Value());
+                for (; horizontal.Right().Value() != horizontal.Value() && this->Flags().Cell(horizontal.Right()) == b_type; horizontal = horizontal.Right()) {
+                    count_right++;
+                }
+                index_t count = count_left + 1 + count_right;
+
+                real_t length = count + 1;
+                real_t x = count_left + 1;
+                //-length/2 * (length/2 - length) = length^2/4
+                real_t value = - x * (x - length) / (length*length / 4.0) * this->_velocity[1];
+                // parabola / normalize_to_1 * scale to speed
+
+                // orientation is horizontal top or horizontal bottom
+                v->Cell(it) = value;
+            }
+            break;
+
         case Flags::Outflow:
-        case Flags::SlipHorizontal:
             // d/dn (u v)^T = 0
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 v->Cell(it.Down()) = v->Cell(it.Down().Down());
                 v->Cell(it)        = v->Cell(it.Down().Down()); // nice picture
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 v->Cell(it) = v->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 v->Cell(it) = 2 * v->Cell(it.Left()) - v->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 v->Cell(it) = 2 * v->Cell(it.Right()) - v->Cell(it.Right());
             }
             break;
@@ -306,37 +362,37 @@ void Geometry::Update_P(Grid *p) const {
         case Flags::InflowHorizontal:
         case Flags::InflowVertical:
             // just choose one side
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 p->Cell(it) = p->Cell(it.Down());
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 p->Cell(it) = p->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 p->Cell(it) = p->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 p->Cell(it) = p->Cell(it.Right());
             }
             break;
         case Flags::Outflow:
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 p->Cell(it) = -p->Cell(it.Down());
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 p->Cell(it) = -p->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 p->Cell(it) = -p->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 p->Cell(it) = -p->Cell(it.Right());
             }
             break;
         case Flags::SlipHorizontal:
         case Flags::SlipVertical:
             // set pressure
-            if (b_ori & BoundaryOrientation::Horiz_b) {
+            if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 p->Cell(it) = 2 * this->_pressure - p->Cell(it.Down());
-            } else if (b_ori & BoundaryOrientation::Horiz_t) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 p->Cell(it) = 2 * this->_pressure - p->Cell(it.Top());
-            } else if (b_ori & BoundaryOrientation::Vert_l) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 p->Cell(it) = 2 * this->_pressure - p->Cell(it.Left());
-            } else if (b_ori & BoundaryOrientation::Vert_r) {
+            } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 p->Cell(it) = 2 * this->_pressure - p->Cell(it.Right());
             }
         }
