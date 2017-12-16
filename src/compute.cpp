@@ -223,9 +223,13 @@ const Grid *Compute::GetVorticity() {
 
     InteriorIterator it = InteriorIterator(this->_geom);
     for(it.First(); it.Valid(); it.Next()) {
-        real_t dudy = this->_u->dy_r(it);
-        real_t dvdx = this->_v->dx_r(it);
-        this->_vorticity->Cell(it) = dudy - dvdx;
+        if (this->_geom->Flags().Cell(it) == Flags::Fluid) {
+            real_t dudy = this->_u->dy_r(it);
+            real_t dvdx = this->_v->dx_r(it);
+            this->_vorticity->Cell(it) = dudy - dvdx;
+        } else {
+            this->_vorticity->Cell(it) = 0;
+        }
     }
 
     return this->_vorticity;
