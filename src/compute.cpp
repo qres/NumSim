@@ -245,14 +245,22 @@ const Grid *Compute::GetStream() {
     bit.First();
     stream->Cell(bit) = psi_offset;
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        if (this->_geom->Flags().Cell(bit) == Flags::Fluid) {
+            stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        } else {
+            stream->Cell(bit) = stream->Cell(bit.Left());
+        }
     }
 
     // compute left column
     bit.SetBoundary(Boundary::Left);
     bit.First();
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        stream->Cell(bit) = stream->Cell(bit.Down()) + this->_u->Cell(bit) * h[1];
+        if (this->_geom->Flags().Cell(bit) == Flags::Fluid) {
+            stream->Cell(bit) = stream->Cell(bit.Down()) + this->_u->Cell(bit) * h[1];
+        } else {
+            stream->Cell(bit) = stream->Cell(bit.Down());
+        }
     }
 
     // communicate all psi offsets through the grids
@@ -296,14 +304,22 @@ const Grid *Compute::GetStream() {
     bit.First();
     stream->Cell(bit) = psi_offset;
     for(bit.Next(); bit.Valid(); bit.Next()) {
-        stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        if (this->_geom->Flags().Cell(bit) == Flags::Fluid) {
+            stream->Cell(bit) = stream->Cell(bit.Left()) + this->_v->Cell(bit) * h[0];
+        } else {
+            stream->Cell(bit) = stream->Cell(bit.Left());
+        }
     }
 
     // sum vertically
     //Iterator it = Iterator(this->_geom, stride_y);
     Iterator it = Iterator(this->_geom, stride_y);
     for (; it.Valid(); it.Next()) {
-        stream->Cell(it) = stream->Cell(it.Down()) + this->_u->Cell(it) * h[1];
+        if (this->_geom->Flags().Cell(it) == Flags::Fluid) {
+            stream->Cell(it) = stream->Cell(it.Down()) + this->_u->Cell(it) * h[1];
+        } else {
+            stream->Cell(bit) = stream->Cell(bit.Down());
+        }
     }
 
     return stream;
