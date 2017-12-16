@@ -13,7 +13,8 @@ namespace Flags {
         InflowVertical   = 'V', ///< dp/dn = 0 |  u = u_in * parabola | v = v_in
         Outflow          = 'O', ///< p = 0     |            d/dn (u v)^T = 0
         SlipVertical     = '|', ///< p = p_in  |  du/dy = 0           | v = v_in
-        SlipHorizontal   = '-'  ///< p = p_in  |  u = u_in            | dv/dx = 0
+        SlipHorizontal   = '-', ///< p = p_in  |  u = u_in            | dv/dx = 0
+        Pressure         = 'P'  ///< p = p_in  |  u = contineous      | v = contineous
     };
 }
 

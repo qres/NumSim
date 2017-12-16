@@ -152,6 +152,14 @@ const multi_real_t &Geometry::Mesh() const {
     return this->_h;
 }
 
+const multi_real_t &Geometry::Velocity() const {
+    return this->_velocity;
+}
+
+const real_t &Geometry::Pressure() const {
+    return this->_pressure;
+}
+
 const FlagGrid &Geometry::Flags() const {
     return *this->_flags;
 }
@@ -195,6 +203,7 @@ void Geometry::Update_U(Grid *u) const {
                 // global left boundary => left.flag = self.flag => ori != vert_l -> OK
                 // left = fluid => we have to set the left boundary
                 // left = boundary => it doesent matter what we do...
+                u->Cell(it)        = 0.0;
                 u->Cell(it.Left()) = 0.0;
             } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_r) {
                 u->Cell(it) = 0.0;
@@ -247,6 +256,7 @@ void Geometry::Update_U(Grid *u) const {
             break;
 
         case Flags::Outflow:
+        case Flags::Pressure:
             // d/dn (u v)^T = 0
             if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Vert_l) {
                 u->Cell(it.Left()) = u->Cell(it.Left().Left());
@@ -278,6 +288,7 @@ void Geometry::Update_V(Grid *v) const {
         case Flags::SlipHorizontal:
             // set v to zero
             if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
+                v->Cell(it)        = 0.0;
                 v->Cell(it.Down()) = 0.0;
             } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
                 v->Cell(it) = 0.0;
@@ -330,6 +341,7 @@ void Geometry::Update_V(Grid *v) const {
             break;
 
         case Flags::Outflow:
+        case Flags::Pressure:
             // d/dn (u v)^T = 0
             if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 v->Cell(it.Down()) = v->Cell(it.Down().Down());
@@ -373,6 +385,7 @@ void Geometry::Update_P(Grid *p) const {
             }
             break;
         case Flags::Outflow:
+            // set pressure to zero
             if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 p->Cell(it) = -p->Cell(it.Down());
             } else if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_t) {
@@ -383,8 +396,9 @@ void Geometry::Update_P(Grid *p) const {
                 p->Cell(it) = -p->Cell(it.Right());
             }
             break;
-        case Flags::SlipHorizontal:
         case Flags::SlipVertical:
+        case Flags::SlipHorizontal:
+        case Flags::Pressure:
             // set pressure
             if (b_ori & BoundaryOrientation::Mask_ori & BoundaryOrientation::Horiz_b) {
                 p->Cell(it) = 2 * this->_pressure - p->Cell(it.Down());

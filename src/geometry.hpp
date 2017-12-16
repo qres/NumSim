@@ -58,6 +58,9 @@ public:
   /// Returns the meshwidth
   const multi_real_t &Mesh() const;
 
+  const multi_real_t &Velocity() const;
+  const real_t &Pressure() const;
+
   const FlagGrid &Flags() const;
   FlagGrid &Flags();
 
