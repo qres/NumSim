@@ -91,6 +91,17 @@ public:
   void Next();
 };
 
+class ReverseIterator : public Iterator {
+public:
+  /// Construct a new InteriorIterator
+  ReverseIterator(const Geometry *geom);
+
+  /// Sets the iterator to the first element
+  void First();
+  /// Goes to the next element of the iterator, disables it if position is end
+  void Next();
+};
+
 //------------------------------------------------------------------------------
 /** Iterator for domain boundary cells.
 */

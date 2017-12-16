@@ -110,6 +110,26 @@ Iterator Iterator::Top() const {
     }
 }
 
+ReverseIterator::ReverseIterator(const Geometry *geom) : Iterator(geom) {
+
+}
+
+void ReverseIterator::First() {
+    multi_index_t size = this->_geom->Size();
+    // go to (1,1) as (0,0) is boundary
+    this->_value = (size[0] + 2) * (size[1] + 2) - 1;
+    this->_valid = true;
+}
+
+void ReverseIterator::Next() {
+    multi_index_t size = this->_geom->Size();
+    if (this->_value > 1) {
+        this->_value -= 1;
+    } else {
+        this->_valid = false;
+    }
+}
+
 InteriorIterator::InteriorIterator(const Geometry *geom) : Iterator(geom) {
 
 }
