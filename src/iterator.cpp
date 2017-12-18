@@ -123,7 +123,7 @@ void ReverseIterator::First() {
 
 void ReverseIterator::Next() {
     multi_index_t size = this->_geom->Size();
-    if (this->_value > 1) {
+    if (this->_value >= 1) {
         this->_value -= 1;
     } else {
         this->_valid = false;
