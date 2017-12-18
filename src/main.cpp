@@ -60,7 +60,7 @@ int main(int argc, char **argv) {
 #ifdef USE_DEBUG_VISU
   // Create and initialize the visualization
   Renderer visu(geom.Length(), geom.Mesh());
-  visu.Init(800 / comm.ThreadDim()[0], 800 / comm.ThreadDim()[1],
+  visu.Init(1200 / comm.ThreadDim()[0], 1200 / comm.ThreadDim()[1] * geom.Length()[1] / geom.Length()[0],
             comm.getRank() + 1);
 #endif // USE_DEBUG_VISU
 
