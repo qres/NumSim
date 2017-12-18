@@ -43,6 +43,11 @@ ParticleLine::ParticleLine(): _part() {
 
 }
 
+const std::vector<Particle>& ParticleLine::GetParticles() const {
+    return _part;
+}
+
+
 PathLine::PathLine(const multi_real_t& pos) {
     this->_part.push_back(Particle(pos));
 

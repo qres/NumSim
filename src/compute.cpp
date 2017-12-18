@@ -190,8 +190,10 @@ void Compute::TimeStep(bool printInfo, uint32_t timestep) {
     this->_comm->copyBoundary(this->_u);
     this->_comm->copyBoundary(this->_v);
 
-    this->_streak_line->TimeStep(dt, this->_u, this->_v);
-    this->_path_line->TimeStep(dt, this->_u, this->_v);
+    if (timestep > 500) {
+        this->_streak_line->TimeStep(dt, this->_u, this->_v);
+        this->_path_line->TimeStep(dt, this->_u, this->_v);
+    }
 
     // increment simulated time
     this->_t += dt;

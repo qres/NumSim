@@ -86,7 +86,7 @@ int main(int argc, char **argv) {
   while (comp.GetTime() < param.Tend()) {
 #ifdef USE_DEBUG_VISU
     // Render and check if window is closed
-    int vis_mode = visu.Render(visugrid);
+    int vis_mode = visu.Render(visugrid, comp.GetStreakLine());
 
     // bcast vis_mode to other ranks
     vis_mode = comm.bcast(vis_mode, 0);

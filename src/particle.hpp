@@ -36,6 +36,7 @@ public:
   ParticleLine();
   virtual void TimeStep(const real_t& dt, const Grid* u, const Grid* v) = 0;
   virtual void SaveVTK(const index_t& rank, const index_t& nump, const char* basename, const index_t& idx) const;
+  const std::vector<Particle>& GetParticles() const;
 protected:
   std::vector<Particle> _part;
 };

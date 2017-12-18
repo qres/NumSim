@@ -16,6 +16,7 @@
  */
 
 #include "typedef.hpp"
+#include "particle.hpp"
 #include "grid.hpp"
 #include "SDL2/SDL.h"
 //------------------------------------------------------------------------------
@@ -53,9 +54,9 @@ public:
   int Check();
 
   /// Updates the window with a given grid (auto-scale)
-  int Render(const Grid *grid);
+  int Render(const Grid *grid, const ParticleLine* particles);
   /// Updates the window with a given grid
-  int Render(const Grid *grid, const real_t &min, const real_t &max);
+  int Render(const Grid *grid, const real_t &min, const real_t &max, const ParticleLine* particles);
 
   /// Sets the visability of the grid cells
   void ShowGrid(bool grid);

@@ -23,7 +23,7 @@ uint8_t HueR (real_t value, real_t min, real_t max) {
   if (value < min) value = min;
   if (value > max) value = max;
   double dval = max - min;
-  
+
   if (value < (min + 0.25 * dval))
     return 0;
   if (value < (min + 0.5  * dval))
@@ -37,7 +37,7 @@ uint8_t HueG (real_t value, real_t min, real_t max) {
   if (value < min) value = min;
   if (value > max) value = max;
   double dval = max - min;
-  
+
   if (value < (min + 0.25 * dval))
     return 255*(4 * (value - min) / dval);
   if (value < (min + 0.5  * dval))
@@ -51,7 +51,7 @@ uint8_t HueB (real_t value, real_t min, real_t max) {
   if (value < min) value = min;
   if (value > max) value = max;
   double dval = max - min;
-  
+
   if (value < (min + 0.25 * dval))
     return 255;
   if (value < (min + 0.5  * dval))
@@ -217,9 +217,9 @@ int Renderer::Check() {
   return _state;
 }
 //------------------------------------------------------------------------------
-int Renderer::Render(const Grid *grid) { return Render(grid, _min, _max); }
+int Renderer::Render(const Grid *grid, const ParticleLine* particles) { return Render(grid, _min, _max, particles); }
 //------------------------------------------------------------------------------
-int Renderer::Render(const Grid *grid, const real_t &min, const real_t &max) {
+int Renderer::Render(const Grid *grid, const real_t &min, const real_t &max, const ParticleLine* particles) {
   if (Check() < 0)
     return -1;
   real_t treshold[2] = {0, 0};
@@ -269,6 +269,24 @@ int Renderer::Render(const Grid *grid, const real_t &min, const real_t &max) {
       treshold[0] += _h[_x];
     }
   }
+
+  for (auto particle : particles->GetParticles()) {
+      multi_real_t pos = particle.Pos();
+      real_t pos_x = pos[0] * _width / _length[0];
+      real_t pos_y = _height - pos[1] * _height / _length[1];
+      // render point
+      int radius = 2;
+      for (int j = -radius; j < radius; j++) {
+          for (int k = -radius; k < radius; k++) {
+              if (j*j + k*k <= radius*radius) {
+                  index_t px = pos_x + j;
+                  index_t py = pos_y + k;
+                  setpixelrgb(_screen, fmin(px, _width-1), fmin(py, _height-1), 0,0,0);
+              }
+          }
+      }
+  }
+
   if (SDL_MUSTLOCK(_screen))
     SDL_UnlockSurface(_screen);
   SDL_UpdateWindowSurface(_window);
