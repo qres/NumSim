@@ -50,7 +50,7 @@ struct array_t {
   }
 
   // Value; initialize array_to to val
-  array_t(const _type &v1) {
+  explicit array_t(const _type &v1) {
     for (uint32_t i = 0; i < _dim; ++i)
       x[i] = v1;
   }
