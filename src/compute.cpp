@@ -15,6 +15,8 @@
 
 #include <mpi/mpi.h>
 
+//#define INIT_CHANNEL
+
 
 /// Creates a compute instance with given geometry and parameter
 Compute::Compute(const Geometry *geom, const Parameter *param, const Communicator *comm) {
@@ -82,6 +84,24 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     this->_rhs->Initialize(0);
     this->_F->Initialize(0);
     this->_G->Initialize(0);
+
+    #ifdef INIT_CHANNEL
+        index_t stride_y = this->_geom->Size()[0] + 2;
+        index_t x = (index_t)(this->_geom->Size()[0] / 4);
+        real_t width = this->_geom->Length()[0];
+        real_t height = this->_geom->Size()[1];
+        real_t Re = this->_param->Re();
+        real_t p = this->_geom->Pressure();
+        Iterator it (this->_geom);
+        for(it.First(); it.Valid(); it.Next()) {
+            multi_index_t ij = it.Pos();
+            real_t y = ij[1] - 0.5;
+            this->_p->Cell(it) = this->_geom->Pressure() * ij[0] / (this->_geom->Size()[0] + 1);
+            real_t u_exp = - 0.5 * Re * p / width * (real_t)y * ((real_t)y - (real_t)height) * h[1] * h[1];
+            this->_v->Cell(it) = 0.0;
+            this->_u->Cell(it) = u_exp;
+        }
+    #endif
 
     this->_streak_line = new StreakLine(multi_real_t(0.1, 0.7));
     this->_path_line = new PathLine(multi_real_t(0.1, 0.7));
