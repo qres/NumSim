@@ -373,14 +373,18 @@ void Compute::MomentumEqu(const real_t &dt) {
     real_t gy = 0.0;
 
     for (it.First(); it.Valid(); it.Next()) {
-        if (this->_u->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+        if (this->_u->getGeometry()->Flags().Cell(it) == Flags::Fluid && this->_u->getGeometry()->Flags().Cell(it.Right()) == Flags::Fluid) {
             real_t laplace_u = _u->dxx(it) + _u->dyy(it);
             real_t duudx = _u->DC_duu_dx(it, alpha);
             real_t duvdy = _u->DC_duv_dy(it, alpha, _v);
 
             real_t A_ij = Re_inv * laplace_u - duudx - duvdy + gx;
             this->_F->Cell(it) = this->_u->Cell(it) + dt * A_ij;
+        } else {
+            this->_F->Cell(it) = this->_u->Cell(it);
+        }
 
+        if (this->_v->getGeometry()->Flags().Cell(it) == Flags::Fluid && this->_v->getGeometry()->Flags().Cell(it.Top()) == Flags::Fluid) {
             real_t laplace_v = _v->dxx(it) + _v->dyy(it);
             real_t dvvdy = _v->DC_dvv_dy(it, alpha);
             real_t duvdx = _v->DC_duv_dx(it, alpha, _u);
@@ -388,7 +392,6 @@ void Compute::MomentumEqu(const real_t &dt) {
             real_t B_ij = Re_inv * laplace_v - duvdx - dvvdy + gy;
             this->_G->Cell(it) = this->_v->Cell(it) + dt * B_ij;
         } else {
-            this->_F->Cell(it) = this->_u->Cell(it);
             this->_G->Cell(it) = this->_v->Cell(it);
         }
     }
