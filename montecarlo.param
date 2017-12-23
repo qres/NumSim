@@ -1,0 +1,8 @@
+re      = 1500
+omega   = 1.7
+tau     = 0.5
+eps     = 0.001
+alpha   = 0.9
+iter    = 20
+tend    = 30.0
+dt      = 0.006
