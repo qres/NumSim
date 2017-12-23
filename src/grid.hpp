@@ -76,6 +76,7 @@ public:
 
   /// Returns a pointer to the raw data
   real_t *Data();
+  const real_t *Data() const;
 
   /** Get the offset value of the grid
    */

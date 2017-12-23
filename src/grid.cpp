@@ -278,6 +278,11 @@ real_t *Grid::Data() {
     return this->_data;
 }
 
+const real_t *Grid::Data() const {
+    return this->_data;
+}
+
+
 const Geometry *Grid::getGeometry() const {
     return this->_geom;
 }
