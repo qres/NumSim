@@ -3,6 +3,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <fstream>
+#include <random>
+#include <chrono>
 
 /// \brief sets parameters for Driven Cavity
 Parameter::Parameter() {
@@ -24,9 +26,12 @@ void Parameter::Load(const char *file, bool print) {
     std::ifstream fin (file);
     std::string eq;
     std::string param;
+    real_t sigma_re = 0.0;
     while (fin >> param >> eq) {
         if (param == "re") {
             fin >> this->_re;
+        } else if(param == "sigma_re") {
+            fin >> sigma_re;
         } else if (param == "omega") {
             fin >> this->_omega;
         } else if (param == "tau") {
@@ -45,6 +50,13 @@ void Parameter::Load(const char *file, bool print) {
             std::cout << param << std::endl;
             throw std::runtime_error("unsupported parameter in parameter file");
         }
+    }
+
+    if (sigma_re != 0) {
+        auto seed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        std::default_random_engine generator (seed);
+        std::normal_distribution<double> distribution(this->_re, sigma_re);
+        this->_re = distribution(generator);
     }
 
     if (print) {
