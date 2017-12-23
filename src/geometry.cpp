@@ -31,6 +31,7 @@ Geometry::Geometry(const Communicator *comm) :
     this->split_for_comm();
 
     this->_flags = new FlagGrid(this);
+    this->_flags->set_driven_cavity();
 }
 
 Geometry::~Geometry() {
@@ -75,6 +76,7 @@ void Geometry::Load(const char *file) {
     if (this->_comm->getRank() == 0) std::cout << "Loading geometry from " << file << std::endl;
     std::ifstream fin (file);
     std::string param;
+    bool default_geom = true;
     while (fin >> param) {
         if (param == "size") {
             fin >> this->_size[0] >> this->_size[1];
@@ -91,6 +93,7 @@ void Geometry::Load(const char *file) {
         } else if (param == "geometry") {
             fin >> param;
             if (param == "free") {
+                default_geom = false;
                 this->split_for_comm();
                 delete this->_flags;
                 this->_flags = new FlagGrid(this);
@@ -101,13 +104,6 @@ void Geometry::Load(const char *file) {
                 for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
                     fin.read(&this->Flags().Data()[j * stride_y], stride_y);
                     fin.read(&x, 1); // Newline
-                }
-                // print
-                for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
-                    for (int i = 0; i <=  this->_size[0] + 2 - 1; i++) {
-                        std::cout << Flags().Data()[j*stride_y + i];
-                    }
-                    std::cout << std::endl;
                 }
                 break;
             } else {
@@ -129,6 +125,22 @@ void Geometry::Load(const char *file) {
     }
 
     this->split_for_comm();
+
+    if (default_geom) {
+        delete this->_flags;
+        this->_flags = new FlagGrid(this);
+        this->_flags->set_driven_cavity();
+    }
+
+    // print
+    index_t stride_y = this->_size[0] + 2;
+    for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
+        for (int i = 0; i <=  this->_size[0] + 2 - 1; i++) {
+            std::cout << Flags().Data()[j*stride_y + i];
+        }
+        std::cout << std::endl;
+    }
+
 }
 
 

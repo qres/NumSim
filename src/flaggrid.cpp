@@ -73,6 +73,26 @@ const char FlagGrid::BoundaryOrientation(const Iterator &it) const {
     return 1<<4 | horiz_b << 3 | vert_l << 2 | vert_r << 1 | horiz_t << 0;
 }
 
+void FlagGrid::set_driven_cavity() {
+    BoundaryIterator bit (this->_geom);
+    bit.SetBoundary(Boundary::Bottom);
+    for (bit.First(); bit.Valid(); bit.Next()) {
+        this->Cell(bit) = Flags::Noslip;
+    }
+    bit.SetBoundary(Boundary::Left);
+    for (bit.First(); bit.Valid(); bit.Next()) {
+        this->Cell(bit) = Flags::Noslip;
+    }
+    bit.SetBoundary(Boundary::Right);
+    for (bit.First(); bit.Valid(); bit.Next()) {
+        this->Cell(bit) = Flags::Noslip;
+    }
+    bit.SetBoundary(Boundary::Top);
+    for (bit.First(); bit.Valid(); bit.Next()) {
+        this->Cell(bit) = Flags::Inflow;
+    }
+}
+
 char* FlagGrid::Data() {
     return this->_data;
 }

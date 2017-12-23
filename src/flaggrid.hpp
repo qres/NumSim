@@ -64,6 +64,8 @@ public:
     /// interior  = 1....
     const char BoundaryOrientation(const Iterator &it) const;
 
+    void set_driven_cavity();
+
     char* Data();
 
 private:
