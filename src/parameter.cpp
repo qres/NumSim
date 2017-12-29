@@ -53,7 +53,8 @@ void Parameter::Load(const char *file, bool print) {
     }
 
     if (sigma_re != 0) {
-        auto seed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        auto seed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()
+            + std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         std::default_random_engine generator (seed);
         std::normal_distribution<double> distribution(this->_re, sigma_re);
         this->_re = distribution(generator);
