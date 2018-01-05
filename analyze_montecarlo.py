@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.ticker import NullFormatter
+from scipy.stats import norm
 
 # 0 |   .   | 0.5   1    0
 # 1 | .   . | 0.25  0.5  1 2
@@ -49,40 +50,51 @@ for i in range(N):
 
 all_dat = np.array(all_dat)
 
-print(all_dat.shape)
+print("{} measurements x {} timesteps x {} channels".format(*all_dat.shape))
 
 mean = np.mean(all_dat, axis=0)
 sigma  = np.std(all_dat, axis=0)
 
 last_time_step = all_dat[:,-1,:] # [measurement, ix]
+# mean and simga for increasing N
 running_mean = np.cumsum(last_time_step,axis=0) / np.arange(1,1+last_time_step.shape[0])[:,np.newaxis] # [measurements, ix]
 running_sigma  = np.zeros_like(running_mean) # [measurements, ix]
 for n in range(all_dat.shape[0]):
     diffs = last_time_step[:n,:] - running_mean[n,:]
     running_sigma[n,:] = np.sqrt(np.sum(diffs*diffs, axis=0) / (n - 1))
+# fit mean and sigma to final distribution
+fit = np.array([norm.fit(last_time_step[:,ix]) for ix in range(last_time_step.shape[1])])
+fit_mean  = fit[:,0]
+fit_sigma = fit[:,1]
 
 ix_show = ix_vel0
+
+print("last mean:     {:>.5e}, last sigma:     {:>.5e}".format(mean[-1,ix_show], sigma[-1,ix_show]))
+print("last mean fit: {:>.5e}, last sigma fit: {:>.5e}".format(fit_mean[ix_show], fit_sigma[ix_show]))
 
 fig = plt.figure("Monte Carlo over Time")
 fig.clear()
 ax = fig.add_axes([0.1,0.1,0.65,0.65])
-ax.plot(mean[:,1], mean[:,ix_show], 'r', label=r"mean $\mu$, $\mu\pm\sigma$")
+ax.plot(mean[:,1], mean[:,ix_show], 'r', label=r"mean $\mu(t)$, $\mu(t)\pm\sigma(t)$")
 ax.fill_between(mean[:,1], mean[:,ix_show] + sigma[:,ix_show], mean[:,ix_show] - sigma[:,ix_show], color='r', alpha=.25)
 ax.legend(loc='best')
+ax.set_xlabel("t")
 axh = fig.add_axes([0.75+0.02,0.1,0.2,0.65])
 axh.yaxis.set_major_formatter(NullFormatter())
 axh.xaxis.set_major_formatter(NullFormatter())
-axh.hist(all_dat[:,-1,ix_show], bins=np.sqrt(N), orientation="horizontal")
+axh.hist(all_dat[:,-1,ix_show], color='g', bins=np.sqrt(N), alpha=0.5, normed=True, orientation="horizontal", label="histogram for t={:1.1f}s".format(all_dat[0,-1,1]))
 axv = fig.add_axes([0.1,0.75+0.02,0.65,0.2])
 axv.xaxis.set_major_formatter(NullFormatter())
-axv.plot(mean[:,1], sigma[:,ix_show]**2, color='r', label=r"variance $\sigma^2$")
+axv.plot(mean[:,1], sigma[:,ix_show]**2, color='r', label=r"variance $\sigma^2(t)$")
 axv.legend(loc='best')
-
-print("last mean: {}, last sigma: {}".format(mean[-1,ix_show], sigma[-1,ix_show]))
 
 ylimits = (min(ax.get_ylim()[0], axh.get_ylim()[0]), max(ax.get_ylim()[1], axh.get_ylim()[1]))
 ax.set_ylim(ylimits)
 axh.set_ylim(ylimits)
+
+x = np.linspace(ylimits[0], ylimits[1], 1000)
+axh.plot(norm.pdf(x, fit_mean[ix_show], fit_sigma[ix_show]), x, 'k', linewidth=2, label=r"fit $\mu={:>.1E}, \sigma={:>.1E}$".format(fit_mean[ix_show], fit_sigma[ix_show]))
+axh.legend(loc='best')
 
 ax.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
 axv.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
@@ -94,7 +106,7 @@ fig = plt.figure("Monte Carlo Convergence -- Mean")
 fig.clear()
 ax = fig.add_subplot(111)
 ax.grid()
-ax.loglog(np.abs(running_mean[:,2:] - mean[-1,2:]), basex=2, basey=2)
+ax.loglog(np.abs(running_mean[:,2:] - running_mean[-1,2:]), basex=2, basey=2)
 ax.loglog(np.arange(running_mean.shape[0])**-np.log2(np.sqrt(2)) / 2**6, basex=2, basey=2)
 fig.show()
 
@@ -102,7 +114,7 @@ fig = plt.figure("Monte Carlo Convergence -- Std")
 fig.clear()
 ax = fig.add_subplot(111)
 ax.grid()
-ax.loglog(np.abs(running_sigma[:,2:] - sigma[-1,2:]), basex=2, basey=2)
+ax.loglog(np.abs(running_sigma[:,2:] - running_sigma[-1,2:]), basex=2, basey=2)
 ax.loglog(np.arange(running_mean.shape[0])**-np.log2(np.sqrt(2)) / 2**6, basex=2, basey=2)
 fig.show()
 
@@ -134,7 +146,6 @@ num = 1
 level = 1
 while True:
     trapezoidal.append(2*3*(1000/6) / 2**level * np.sum(X_p[start:start+num,:], axis=0) + trapezoidal[-1] / 2)
-    print(level, start, start+num, num)
     level += 1
     start += num
     num *= 2
