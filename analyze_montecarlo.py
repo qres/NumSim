@@ -62,15 +62,10 @@ running_sigma  = np.zeros_like(running_mean) # [measurements, ix]
 for n in range(all_dat.shape[0]):
     diffs = last_time_step[:n,:] - running_mean[n,:]
     running_sigma[n,:] = np.sqrt(np.sum(diffs*diffs, axis=0) / (n - 1))
-# fit mean and sigma to final distribution
-fit = np.array([norm.fit(last_time_step[:,ix]) for ix in range(last_time_step.shape[1])])
-fit_mean  = fit[:,0]
-fit_sigma = fit[:,1]
 
 ix_show = ix_vel0
 
-print("last mean:     {:>.5e}, last sigma:     {:>.5e}".format(mean[-1,ix_show], sigma[-1,ix_show]))
-print("last mean fit: {:>.5e}, last sigma fit: {:>.5e}".format(fit_mean[ix_show], fit_sigma[ix_show]))
+print("last mean: {:>.5e}, last sigma: {:>.5e}".format(mean[-1,ix_show], sigma[-1,ix_show]))
 
 fig = plt.figure("Monte Carlo over Time")
 fig.clear()
@@ -93,7 +88,7 @@ ax.set_ylim(ylimits)
 axh.set_ylim(ylimits)
 
 x = np.linspace(ylimits[0], ylimits[1], 1000)
-axh.plot(norm.pdf(x, fit_mean[ix_show], fit_sigma[ix_show]), x, 'k', linewidth=2, label=r"fit $\mu={:>.1E}, \sigma={:>.1E}$".format(fit_mean[ix_show], fit_sigma[ix_show]))
+axh.plot(norm.pdf(x, mean[-1,ix_show], sigma[-1,ix_show]), x, 'k', linewidth=2, label=r"fit $\mu={:>.1E}, \sigma={:>.1E}$".format(mean[-1,ix_show], sigma[-1,ix_show]))
 axh.legend(loc='best')
 
 ax.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
