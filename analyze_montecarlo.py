@@ -151,19 +151,18 @@ for i in range(N):
         assert((dat[:,1] == all_tr_dat[0][:,1]).all())
         all_tr_dat.append(dat)
 
-all_tr_dat = np.array(all_tr_dat)
-last_tr_time_step = all_tr_dat[:,-1,:] # [measurement, ix]
+all_tr_dat = np.array(all_tr_dat) # [measurement, time, ix]
 
 trapezoidal = []
-X_p = hier_p[:,np.newaxis] * last_tr_time_step
+X_p = hier_p[:,np.newaxis,np.newaxis] * all_tr_dat
 #X_p[[0,1]] /= 2
 #     +/- 3 sigma   * (a+b) / 2
-trapezoidal.append(2*3*(1000/6) * (X_p[0,:] + X_p[1,:])/2)
+trapezoidal.append(2*3*(1000/6) * (X_p[0,:,:] + X_p[1,:,:])/2)
 start = 2
 num = 1
 level = 1
 while True:
-    trapezoidal.append(2*3*(1000/6) / 2**level * np.sum(X_p[start:start+num,:], axis=0) + trapezoidal[-1] / 2)
+    trapezoidal.append(2*3*(1000/6) / 2**level * np.sum(X_p[start:start+num,:,:], axis=0) + trapezoidal[-1] / 2)
     level += 1
     start += num
     num *= 2
@@ -175,7 +174,7 @@ while True:
 # s(h)   = I +         ch⁴(1/4 - 1)/(4-1)
 #        = I +         ch⁴(-1/4)
 # s(h)   = I +         c'h⁴
-# s(h/2) = I +         c'h⁴ / 16
+# s(h/2) = I +         c'h⁴ / 16                                # convergence for last time step:
 trapezoidal = np.array(trapezoidal)                             # good h^2 convergence after the first two steps
 simpson  = (4*trapezoidal[1:,:] - 1*trapezoidal[:-1,:]) / (4-1) # good h^4 convergence after the first two steps, levels out at 3.7e-9
 simpson2 = (16*simpson[1:,:] - 1*simpson[:-1,:]) / (16-1)       # good h^6 convergence after the first two steps, quickly levels out at 3.7e-9
@@ -188,10 +187,10 @@ ax.set_xlabel("levels")
 ax.set_ylabel("error")
 ax.set_xticks(np.arange(trapezoidal.shape[0]))
 ax.grid()
-ax.semilogy(np.arange(trapezoidal.shape[0]), np.abs(trapezoidal[:,2:] - simpson3[-1,2:]), 'r-', basey=2)
-ax.semilogy(np.arange(simpson.shape[0]), np.abs(simpson[:,2:] - simpson3[-1,2:]), 'b-', basey=2)
-ax.semilogy(np.arange(simpson2.shape[0]), np.abs(simpson2[:,2:] - simpson3[-1,2:]), 'g-', basey=2)
-ax.semilogy(np.arange(simpson3.shape[0]), np.abs(simpson3[:,2:] - simpson3[-1,2:]), 'orange', basey=2)
+ax.semilogy(np.arange(trapezoidal.shape[0]), np.abs(trapezoidal[:,-1,2:] - simpson3[-1,-1,2:]), 'r-', basey=2)
+ax.semilogy(np.arange(simpson.shape[0]), np.abs(simpson[:,-1,2:] - simpson3[-1,-1,2:]), 'b-', basey=2)
+ax.semilogy(np.arange(simpson2.shape[0]), np.abs(simpson2[:,-1,2:] - simpson3[-1,-1,2:]), 'g-', basey=2)
+ax.semilogy(np.arange(simpson3.shape[0]), np.abs(simpson3[:,-1,2:] - simpson3[-1,-1,2:]), 'orange', basey=2)
 ax.legend(loc='best')
 fig.show()
 
@@ -202,9 +201,9 @@ ax.set_xlabel("levels")
 ax.set_ylabel("error")
 ax.set_xticks(np.arange(trapezoidal.shape[0]))
 ax.grid()
-ax.semilogy(np.arange(trapezoidal.shape[0]-1), np.abs(trapezoidal[1:,ix_u1] - trapezoidal[:-1,ix_u1]), 'r-', basey=2)
-ax.semilogy(np.arange(simpson.shape[0]-1),     np.abs(simpson[1:,ix_u1] - simpson[:-1,ix_u1]), 'b-', basey=2)
-ax.semilogy(np.arange(simpson2.shape[0]-1),    np.abs(simpson2[1:,ix_u1] - simpson2[:-1,ix_u1]), 'g-', basey=2)
-ax.semilogy(np.arange(simpson3.shape[0]-1),    np.abs(simpson3[1:,ix_u1] - simpson3[:-1,ix_u1]), 'orange', basey=2)
+ax.semilogy(np.arange(trapezoidal.shape[0]-1), np.abs(trapezoidal[1:,-1,ix_u1] - trapezoidal[:-1,-1,ix_u1]), 'r-', basey=2)
+ax.semilogy(np.arange(simpson.shape[0]-1),     np.abs(simpson[1:,-1,ix_u1] - simpson[:-1,-1,ix_u1]), 'b-', basey=2)
+ax.semilogy(np.arange(simpson2.shape[0]-1),    np.abs(simpson2[1:,-1,ix_u1] - simpson2[:-1,-1,ix_u1]), 'g-', basey=2)
+ax.semilogy(np.arange(simpson3.shape[0]-1),    np.abs(simpson3[1:,-1,ix_u1] - simpson3[:-1,-1,ix_u1]), 'orange', basey=2)
 ax.legend(loc='best')
 fig.show()
