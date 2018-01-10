@@ -149,15 +149,19 @@ for i in range(N):
 all_tr_dat = np.array(all_tr_dat) # [measurement, time, ix]
 
 trapezoidal = []
+trapezoidal_sigma = []
 X_p = hier_p[:,np.newaxis,np.newaxis] * all_tr_dat
 #X_p[[0,1]] /= 2
 #     +/- 3 sigma   * (a+b) / 2
 trapezoidal.append(2*3*(1000/6) * (X_p[0,:,:] + X_p[1,:,:])/2)
+trapezoidal_sigma.append(2*3*(1000/6) * np.sum((all_tr_dat[:2,:,:] - trapezoidal[-1]) ** 2 * hier_p[:2,np.newaxis,np.newaxis], axis=0) / 2)
 start = 2
 num = 1
 level = 1
 while True:
     trapezoidal.append(2*3*(1000/6) / 2**level * np.sum(X_p[start:start+num,:,:], axis=0) + trapezoidal[-1] / 2)
+    trapezoidal_sigma.append(2*3*(1000/6) / 2**level * np.sum((all_tr_dat[start:start+num,:,:] - trapezoidal[-1]) ** 2  * hier_p[start:start+num,np.newaxis,np.newaxis], axis=0) + trapezoidal_sigma[-1] / 2)
+    trapezoidal_sigma[-1] = trapezoidal_sigma[-1]
     level += 1
     start += num
     num *= 2
@@ -174,6 +178,41 @@ trapezoidal = np.array(trapezoidal)                             # good h^2 conve
 simpson  = (4*trapezoidal[1:,:] - 1*trapezoidal[:-1,:]) / (4-1) # good h^4 convergence after the first two steps, levels out at 3.7e-9
 simpson2 = (16*simpson[1:,:] - 1*simpson[:-1,:]) / (16-1)       # good h^6 convergence after the first two steps, quickly levels out at 3.7e-9
 simpson3 = (64*simpson[1:,:] - 1*simpson[:-1,:]) / (64-1)       # only h^6 convergence after the first two steps, quickly levels out at 3.7e-9
+
+trapezoidal_sigma = np.sqrt(np.array(trapezoidal_sigma)) # variance = sigma^2
+
+fig = plt.figure("Monte Carlo vs Trapezoidal over Time", figsize=(20,12))
+fig.clear()
+ax = fig.add_axes([0.1,0.1,0.65,0.65])
+ax.plot(mean[:,1], mean[:,ix_show], 'r', label=r"mean mc $\mu(t)$, $\mu(t)\pm\sigma(t)$")
+ax.fill_between(mean[:,1], mean[:,ix_show] + sigma[:,ix_show], mean[:,ix_show] - sigma[:,ix_show], color='r', alpha=.25)
+ax.plot(mean[:,1], trapezoidal[-1,:,ix_show], 'b', label=r"mean tr $\mu(t)$, $\mu(t)\pm\sigma(t)$") #use most refined trapezoidal
+ax.fill_between(mean[:,1], trapezoidal[-1,:,ix_show] + trapezoidal_sigma[-1,:,ix_show], trapezoidal[-1,:,ix_show] - trapezoidal_sigma[-1,:,ix_show], color='b', alpha=.25)
+ax.legend(loc='best')
+ax.set_xlabel("t")
+axh = fig.add_axes([0.75+0.02,0.1,0.2,0.65])
+axh.yaxis.set_major_formatter(NullFormatter())
+axh.xaxis.set_major_formatter(NullFormatter())
+axh.hist(all_dat[:,-1,ix_show], color='r', bins=np.sqrt(N), alpha=0.25, normed=True, orientation="horizontal", label="histogram for t={:1.1f}s".format(all_dat[0,-1,1]))
+axv = fig.add_axes([0.1,0.75+0.02,0.65,0.17])
+axv.xaxis.set_major_formatter(NullFormatter())
+axv.plot(mean[:,1], sigma[:,ix_show]**2, color='r', label=r"variance mc $\sigma^2(t)$")
+axv.plot(mean[:,1], trapezoidal_sigma[-1,:,ix_show]**2, color='b', label=r"variance tr $\sigma^2(t)$")
+axv.legend(loc='best')
+
+ylimits = (min(ax.get_ylim()[0], axh.get_ylim()[0]), max(ax.get_ylim()[1], axh.get_ylim()[1]))
+ax.set_ylim(ylimits)
+axh.set_ylim(ylimits)
+
+x = np.linspace(ylimits[0], ylimits[1], 1000)
+axh.plot(norm.pdf(x, mean[-1,ix_show], sigma[-1,ix_show]), x, 'r', linewidth=2, label=r"fit $\mu={:>.1E}, \sigma={:>.1E}$".format(mean[-1,ix_show], sigma[-1,ix_show]))
+axh.plot(norm.pdf(x, trapezoidal[-1,-1,ix_show], trapezoidal_sigma[-1,-1,ix_show]), x, 'b', linewidth=2, label=r"fit $\mu={:>.1E}, \sigma={:>.1E}$".format(trapezoidal[-1,-1,ix_show], trapezoidal_sigma[-1,-1,ix_show]))
+axh.legend(loc='best')
+
+ax.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
+axv.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
+fig.show()
+
 
 fig = plt.figure("Trapezoidal")
 fig.clear()
