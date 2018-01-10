@@ -8,6 +8,13 @@ from scipy.stats import norm
 # 2 |. . . .| 0.125 0.25 3 4 5 6
 # 3                      7
 
+def show(fig):
+    if False:
+        fig.show()
+    else:
+        fig.suptitle(fig.get_label())
+        fig.savefig("plots4/{}.png".format(fig.get_label().lower().replace(' ','_')))
+
 def hier_ix(ix, shift_n1p1=True):
     level = int(np.log2(ix+1))
     offset = 0.5**(level + 1)
@@ -67,7 +74,7 @@ ix_show = ix_vel0
 
 print("last mean: {:>.5e}, last sigma: {:>.5e}".format(mean[-1,ix_show], sigma[-1,ix_show]))
 
-fig = plt.figure("Monte Carlo over Time")
+fig = plt.figure("Monte Carlo over Time", figsize=(20,12))
 fig.clear()
 ax = fig.add_axes([0.1,0.1,0.65,0.65])
 ax.plot(mean[:,1], mean[:,ix_show], 'r', label=r"mean $\mu(t)$, $\mu(t)\pm\sigma(t)$")
@@ -78,7 +85,7 @@ axh = fig.add_axes([0.75+0.02,0.1,0.2,0.65])
 axh.yaxis.set_major_formatter(NullFormatter())
 axh.xaxis.set_major_formatter(NullFormatter())
 axh.hist(all_dat[:,-1,ix_show], color='g', bins=np.sqrt(N), alpha=0.5, normed=True, orientation="horizontal", label="histogram for t={:1.1f}s".format(all_dat[0,-1,1]))
-axv = fig.add_axes([0.1,0.75+0.02,0.65,0.2])
+axv = fig.add_axes([0.1,0.75+0.02,0.65,0.17])
 axv.xaxis.set_major_formatter(NullFormatter())
 axv.plot(mean[:,1], sigma[:,ix_show]**2, color='r', label=r"variance $\sigma^2(t)$")
 axv.legend(loc='best')
@@ -93,18 +100,18 @@ axh.legend(loc='best')
 
 ax.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
 axv.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
-fig.show()
+show(fig)
 
 # Convergence of MC
 
-fig = plt.figure("Monte Carlo Convergence -- Mean")
+fig = plt.figure("Monte Carlo Convergence - Mean")
 fig.clear()
 ax = fig.add_subplot(111)
 ax.grid()
 ax.loglog(np.abs(running_mean[:,2:] - running_mean[-1,2:]), basex=2, basey=2)
 ax.loglog(np.arange(running_mean.shape[0])**-np.log2(np.sqrt(2)) / 2**6, basex=2, basey=2)
 ax.set_xlabel("N")
-fig.show()
+show(fig)
 
 fig = plt.figure("Monte Carlo Running Mean")
 fig.clear()
@@ -112,16 +119,16 @@ ax = fig.add_subplot(111)
 ax.grid()
 ax.plot(running_mean[:,2:])
 ax.set_xlabel("N")
-fig.show()
+show(fig)
 
-fig = plt.figure("Monte Carlo Convergence -- Std")
+fig = plt.figure("Monte Carlo Convergence - Std")
 fig.clear()
 ax = fig.add_subplot(111)
 ax.grid()
 ax.loglog(np.abs(running_sigma[:,2:] - running_sigma[-1,2:]), basex=2, basey=2)
 ax.loglog(np.arange(running_mean.shape[0])**-np.log2(np.sqrt(2)) / 2**6, basex=2, basey=2)
 ax.set_xlabel("N")
-fig.show()
+show(fig)
 
 fig = plt.figure("Monte Carlo Running Std")
 fig.clear()
@@ -129,7 +136,7 @@ ax = fig.add_subplot(111)
 ax.grid()
 ax.plot(running_sigma[:,2:])
 ax.set_xlabel("N")
-fig.show()
+show(fig)
 
 # Convergence of Trapezoidal Rule
 
@@ -211,7 +218,7 @@ axh.legend(loc='best')
 
 ax.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
 axv.set_xlim(0,all_dat[0,-1,1]) # tight to last time stamp
-fig.show()
+show(fig)
 
 
 fig = plt.figure("Trapezoidal")
@@ -226,7 +233,7 @@ ax.semilogy(np.arange(simpson.shape[0]), np.abs(simpson[:,-1,2:] - simpson3[-1,-
 ax.semilogy(np.arange(simpson2.shape[0]), np.abs(simpson2[:,-1,2:] - simpson3[-1,-1,2:]), 'g-', basey=2)
 ax.semilogy(np.arange(simpson3.shape[0]), np.abs(simpson3[:,-1,2:] - simpson3[-1,-1,2:]), 'orange', basey=2)
 ax.legend(loc='best')
-fig.show()
+show(fig)
 
 fig = plt.figure("Trapezoidal Error Difference")
 fig.clear()
@@ -240,4 +247,4 @@ ax.semilogy(np.arange(simpson.shape[0]-1),     np.abs(simpson[1:,-1,ix_u1] - sim
 ax.semilogy(np.arange(simpson2.shape[0]-1),    np.abs(simpson2[1:,-1,ix_u1] - simpson2[:-1,-1,ix_u1]), 'g-', basey=2)
 ax.semilogy(np.arange(simpson3.shape[0]-1),    np.abs(simpson3[1:,-1,ix_u1] - simpson3[:-1,-1,ix_u1]), 'orange', basey=2)
 ax.legend(loc='best')
-fig.show()
+show(fig)
