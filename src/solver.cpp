@@ -141,6 +141,7 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
         if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
             real_t loc = localRes(it, p, rhs);
             res += loc*loc;
+            count++;
         }
     }
     res /= count;
