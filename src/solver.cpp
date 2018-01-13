@@ -150,3 +150,32 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
     return res;
 
 }
+
+#include "mg_impl.cpp"
+
+MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
+    this->_cfg = cfg;
+}
+
+MultiGrid::~MultiGrid() {
+
+}
+
+real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
+    solve_v_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size()[0], p->Data(), rhs->Data()); // TODO: different resolution in each dimenson
+    InteriorIterator it(this->_geom);
+    // compute residual
+    real_t res = 0;
+    index_t count = 0;
+    for(it.First(); it.Valid(); it.Next()) {
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            real_t loc = localRes(it, p, rhs);
+            res += loc*loc;
+            count++;
+        }
+    }
+    res /= count;
+    res = sqrt(res);
+
+    return res;
+}

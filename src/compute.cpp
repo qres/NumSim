@@ -67,7 +67,11 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
     this->_vorticity = new Grid(geom, multi_real_t(h[0], h[1]));
     this->_stream    = new Grid(geom, multi_real_t(h[0], h[1]));
 
-    #ifdef RB_SOR
+    #ifdef USE_MG
+        this->_cfg = new Cfg();
+        *this->_cfg = Cfg::two_grid(3, 0.001, 5, Cfg_jacobi(500, 0.001)); // 3 iters with 5 pre a nd 5 post
+        _solver = new MultiGrid(geom, this->_cfg);
+    #elif defined USE_RB_SOR
         _solver = new RedOrBlackSOR(geom, param->Omega());
     #else
         _solver = new SOR(geom, param->Omega());
@@ -119,6 +123,9 @@ Compute::~Compute() {
     delete this->_vorticity;
     delete this->_stream;
     delete this->_solver;
+#ifdef USE_MG
+    delete this->_cfg;
+#endif
     delete this->_streak_line;
     delete this->_path_line;
 }

@@ -28,10 +28,15 @@
 #include <iostream>
 #include <sys/stat.h>
 
+#include <fenv.h>
+
 //#undef USE_DEBUG_VISU
 //#define NO_VTK
 
 int main(int argc, char **argv) {
+  // we want floating point exeptions
+  //feenableexcept(FE_DIVBYZERO | FE_INVALID | FE_OVERFLOW);
+
   // Create parameter and geometry instances with default values
   Communicator comm(&argc, &argv);
   comm.set_boundary_comm(CommBoundary::Sweep);

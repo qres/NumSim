@@ -22,7 +22,9 @@
 
 
 // use Red-Black-SOR
-//#define RB_SOR
+//#define USE_RB_SOR
+// use Multi Grid
+#define USE_MG
 
 
 //------------------------------------------------------------------------------
@@ -93,7 +95,10 @@ private:
   StreakLine *_streak_line;
   PathLine *_path_line;
 
-  #ifdef RB_SOR
+  #ifdef USE_MG
+    MultiGrid *_solver;
+    Cfg *_cfg;
+  #elif defined USE_RB_SOR
     RedOrBlackSOR *_solver;
   #else
     Solver *_solver;

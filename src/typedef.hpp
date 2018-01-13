@@ -97,6 +97,8 @@ class Grid;
 class Parameter;
 class Solver;
 class RedOrBlackSOR;
+class MultiGrid;
+class Cfg;
 class Compute;
 class ParticleLine;
 class StreakLine;
