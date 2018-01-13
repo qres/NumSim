@@ -1,4 +1,4 @@
-#include <mpi/mpi.h> # keep this at the top. Otherwise we get problems with MPI_REAL_T
+#include <mpi/mpi.h> // keep this at the top. Otherwise we get problems with MPI_REAL_T
 
 #include "communicator.hpp"
 #include "geometry.hpp"
@@ -41,7 +41,6 @@ void Communicator::opt_geom(Geometry* geom) {
     this->_tidx = multi_index_t(getRank() % this->_tdim[0], getRank() / this->_tdim[0]);
 
     index_t bsize_x = size[0]/this->ThreadDim()[0];
-    index_t bsize_y = size[1]/this->ThreadDim()[1];
     this->_evenodd = (bsize_x * this->ThreadIdx()[0] + bsize_x * this->ThreadIdx()[1]) % 2 == 0;
 
     // update the local size for the geometry
@@ -292,25 +291,25 @@ void Communicator::copyBoundary(Grid *grid) const {
 
 /** Decide whether our left boundary is a domain boundary
 */
-const bool Communicator::isLeft() const {
+bool Communicator::isLeft() const {
     return this->_tidx[0] == 0;
 }
 
 /** Decide whether our right boundary is a domain boundary
 */
-const bool Communicator::isRight() const {
+bool Communicator::isRight() const {
     return this->_tidx[0] == this->_tdim[0] - 1;
 }
 
 /** Decide whether our top boundary is a domain boundary
 */
-const bool Communicator::isTop() const {
+bool Communicator::isTop() const {
     return this->_tidx[1] == this->_tdim[1] - 1;
 }
 
 /** Decide whether our bottom boundary is a domain boundary
 */
-const bool Communicator::isBottom() const {
+bool Communicator::isBottom() const {
     return this->_tidx[1] == 0;
 }
 

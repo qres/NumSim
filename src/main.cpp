@@ -76,7 +76,6 @@ int main(int argc, char **argv) {
 
 #ifdef USE_DEBUG_VISU
   const Grid *visugrid;
-  const int old_vis_mode = 0;
 
   visugrid = comp.GetVelocity();
 #endif // USE_DEBUG_VISU

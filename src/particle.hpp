@@ -44,14 +44,14 @@ protected:
 class PathLine : public ParticleLine {
 public:
   PathLine (const multi_real_t& pos);
-  ~PathLine ();
+  virtual ~PathLine ();
   void TimeStep(const real_t& dt, const Grid* u, const Grid* v);
 };
 //------------------------------------------------------------------------------
 class StreakLine : public ParticleLine {
 public:
   StreakLine (const multi_real_t& pos);
-  ~StreakLine ();
+  virtual ~StreakLine ();
   void TimeStep(const real_t& dt, const Grid* u, const Grid* v);
 private:
   multi_real_t _org;

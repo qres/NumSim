@@ -85,7 +85,6 @@ real_t SOR::Cycle(Grid *p, const Grid *rhs) const {
     solve_SOR<true,true>(this->_geom, this->_omega, p, rhs);
 
     InteriorIterator it(this->_geom);
-    multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
     index_t count = 0;
@@ -115,7 +114,6 @@ real_t RedOrBlackSOR::RedCycle(Grid *p, const Grid *rhs) const {
     solve_SOR<false,true>(this->_geom, this->_omega, p, rhs);
 
     InteriorIterator it(this->_geom);
-    multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
     index_t count = 0;
@@ -136,7 +134,6 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
     solve_SOR<true,false>(this->_geom, this->_omega, p, rhs);
 
     InteriorIterator it(this->_geom);
-    multi_real_t h = this->_geom->Mesh();
     // compute residual
     real_t res = 0;
     index_t count = 0;

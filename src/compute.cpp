@@ -366,7 +366,6 @@ void Compute::MomentumEqu(const real_t &dt) {
     // calculate F
     Iterator it (this->_geom);
 
-    multi_real_t h = this->_geom->Mesh();
     real_t Re_inv = 1.0 / this->_param->Re();
     real_t alpha = this->_param->Alpha();
     real_t gx = 0.0;

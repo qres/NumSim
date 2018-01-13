@@ -19,13 +19,13 @@ Geometry::Geometry() : Geometry(0) {
 }
 
 Geometry::Geometry(const Communicator *comm) :
+    _comm(comm),
     _size(N, N),
     _length(1.0, 1.0),
     _h(1.0/(N + 1), 1.0/(N + 1)),
     // velocity at upper boundary
     _velocity(1.0, 0.0),
     _pressure(0.1),
-    _comm(comm),
     _flags(0) {
 
     this->split_for_comm();
@@ -135,7 +135,7 @@ void Geometry::Load(const char *file) {
     // print
     index_t stride_y = this->_size[0] + 2;
     for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
-        for (int i = 0; i <=  this->_size[0] + 2 - 1; i++) {
+        for (unsigned int i = 0; i <= this->_size[0] + 2 - 1; i++) {
             std::cout << Flags().Data()[j*stride_y + i];
         }
         std::cout << std::endl;

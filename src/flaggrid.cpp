@@ -51,18 +51,13 @@ const char &FlagGrid::Cell(const Iterator &it) const {
 /// corner bl = 111..
 /// corner br = 11.1.
 /// interior  = 1....
-const char FlagGrid::BoundaryOrientation(const Iterator &it) const {
+char FlagGrid::BoundaryOrientation(const Iterator &it) const {
     auto self   = this->Cell(it);
     if (self == Flags::Fluid) return 0;
     auto left   = this->Cell(it.Left());
     auto right  = this->Cell(it.Right());
     auto bottom = this->Cell(it.Down());
     auto top    = this->Cell(it.Top());
-
-    bool is_l_boundary = it.Value() == it.Left().Value();
-    bool is_r_boundary = it.Value() == it.Right().Value();
-    bool is_b_boundary = it.Value() == it.Down().Value();
-    bool is_t_boundary = it.Value() == it.Top().Value();
 
     // we alredy know that self is not a fluid
     bool vert_r  = right  == Flags::Fluid;

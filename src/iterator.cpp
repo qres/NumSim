@@ -122,7 +122,6 @@ void ReverseIterator::First() {
 }
 
 void ReverseIterator::Next() {
-    multi_index_t size = this->_geom->Size();
     if (this->_value >= 1) {
         this->_value -= 1;
     } else {
@@ -148,7 +147,6 @@ void InteriorIterator::Next() {
     index_t stride_y = size[0] + 2;
     this->_value += 1;
     size_t ix = this->Value() % stride_y; //x-minor
-    size_t jy = this->Value() / stride_y; //y-major
     if (ix == size[0] + 1) {
         // skip boundary
         this->_value += 2;

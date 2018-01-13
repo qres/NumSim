@@ -62,7 +62,7 @@ public:
     /// corner bl = 111..
     /// corner br = 11.1.
     /// interior  = 1....
-    const char BoundaryOrientation(const Iterator &it) const;
+    char BoundaryOrientation(const Iterator &it) const;
 
     void set_driven_cavity();
 

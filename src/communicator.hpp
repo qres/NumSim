@@ -97,19 +97,19 @@ public:
 
   /** Decide whether our left boundary is a domain boundary
    */
-  const bool isLeft() const;
+  bool isLeft() const;
 
   /** Decide whether our right boundary is a domain boundary
    */
-  const bool isRight() const;
+  bool isRight() const;
 
   /** Decide whether our top boundary is a domain boundary
    */
-  const bool isTop() const;
+  bool isTop() const;
 
   /** Decide whether our bottom boundary is a domain boundary
    */
-  const bool isBottom() const;
+  bool isBottom() const;
 
   /** Get MPI rank of current process
    */

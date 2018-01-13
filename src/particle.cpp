@@ -103,7 +103,7 @@ void ParticleLine::SaveVTK (const index_t& rank, const index_t& nump, const char
                     "<PDataArray type=\"Int32\" Name=\"mpirank\" "
                     "format=\"ascii\"/>\n\t\t\t"
                     "</PPointData>\n");
-    for (int p = 0; p < nump; ++p)
+    for (unsigned int p = 0; p < nump; ++p)
       fprintf(handle, "\t\t<Piece Source=\"%s_%05i_%04i.vtp\"/>\n", filebase, idx, rank);
     fprintf(handle, "\t</PPolyData>\n</VTKFile>\n");
     fclose(handle);
@@ -118,14 +118,14 @@ void ParticleLine::SaveVTK (const index_t& rank, const index_t& nump, const char
                   "NumberOfPolys=\"0\">\n\t\t\t<Points>\n\t\t\t\t"
                   "<DataArray type=\"Float32\" Name=\"Position\" "
                   "NumberOfComponents=\"3\" format=\"ascii\">\n");
-  for (int p = 0; p < _part.size(); ++p) {
+  for (unsigned int p = 0; p < _part.size(); ++p) {
     fprintf(handle, "\t\t\t\t\t%le %le %le\n", _part[p].Pos()[0], _part[p].Pos()[1], 0.0);
   }
   fprintf(handle, "\t\t\t\t</DataArray>\n\t\t\t</Points>\n\t\t\t"
                   "<PointData Scalars=\"mpirank\">\n\t\t\t\t"
                   "<DataArray type=\"Int32\" Name=\"mpirank\" "
                   "format=\"ascii\">\n\t\t\t\t\t");
-  for (int p = 0; p < _part.size(); ++p) {
+  for (unsigned int p = 0; p < _part.size(); ++p) {
     fprintf(handle, "%i ", rank);
   }
   fprintf(handle, "\n\t\t\t\t</DataArray>\n\t\t\t</PointData>\n"
