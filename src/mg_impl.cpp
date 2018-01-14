@@ -76,8 +76,8 @@ T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const
     T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N[0]; ++i) {
-        for (unsigned int j(1); j<=N[1]; ++j) {
+    for (unsigned int j(1); j<=N[1]; ++j) {
+        for (unsigned int i(1); i<=N[0]; ++i) {
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
@@ -95,8 +95,8 @@ T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
     T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N[0]; ++i) {
-        for (unsigned int j(1); j<=N[1]; ++j) {
+    for (unsigned int j(1); j<=N[1]; ++j) {
+        for (unsigned int i(1); i<=N[0]; ++i) {
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
@@ -114,8 +114,8 @@ T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
     T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N[0]; ++i) {
-        for (unsigned int j(1); j<=N[1]; ++j) {
+    for (unsigned int j(1); j<=N[1]; ++j) {
+        for (unsigned int i(1); i<=N[0]; ++i) {
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             norm = max(norm,abs(entry));
         }
@@ -179,8 +179,8 @@ void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T*
     T hx = 1.0/(N[0] + 1) * length[0];
     T hy = 1.0/(N[1] + 1) * length[1];
 
-    for (unsigned int i(0); i<=N[0]+1; ++i) {
-        for (unsigned int j(0); j<=N[1]+1; ++j) {
+    for (unsigned int j(0); j<=N[1]+1; ++j) {
+        for (unsigned int i(0); i<=N[0]+1; ++i) {
             if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
                 m(res,i,j) = 0.0;
             } else {
@@ -238,8 +238,8 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         #define m get_matrix_NxN
 
         // boundary is known
-        for (unsigned int i(0); i<=N[0]+1; ++i) {
-            for (unsigned int j(0); j<=N[1]+1; ++j) {
+        for (unsigned int j(0); j<=N[1]+1; ++j) {
+            for (unsigned int i(0); i<=N[0]+1; ++i) {
                 if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
                     m(u1,i,j) = m(u0,i,j);
                 } else {
@@ -308,8 +308,8 @@ multi_index_t restrict_fw_2D(multi_index_t N, const T* v_N, T* v_n) {
     _v_n(n[0]+1, n[1]+1) = _v_N(N[0]+1,N[1]+1);
 
     // stencil
-    for (unsigned int i(2); i<=N[0]; i+=2) {
-        for (unsigned int j(2); j<=N[1]; j+=2) {
+    for (unsigned int j(2); j<=N[1]; j+=2) {
+        for (unsigned int i(2); i<=N[0]; i+=2) {
             _v_n(i/2,j/2) = 1.0/16.0 * (
                 1*_v_N(i-1, j-1) + 2*_v_N(i, j-1) + 1*_v_N(i+1, j-1) +
                 2*_v_N(i-1, j  ) + 4*_v_N(i, j  ) + 2*_v_N(i+1, j  ) +
@@ -340,8 +340,8 @@ multi_index_t interplolate_2D(multi_index_t n, const T* v_n, T* v_N) {
     0 0 0 0 0 0 0
     x 0 x 0 x 0 x
     */
-    for (unsigned int i(1); i<=n[0]+1; ++i) {
-        for (unsigned int j(1); j<=n[1]+1; ++j) {
+    for (unsigned int j(1); j<=n[1]+1; ++j) {
+        for (unsigned int i(1); i<=n[0]+1; ++i) {
             if (2*i != N[0]+1 && 2*j != N[1]+1) _v_N(2*i,     2*j    ) = _v_n(i,j);
             if (2*j != N[1]+1)                  _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
             if (2*i != N[0]+1)                  _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
@@ -391,8 +391,8 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 
     static void add_correction(multi_index_t N, T* u, const T* e) {
         #define m get_matrix_NxN
-        for (unsigned int i(1); i <= N[0]; ++i) {
-            for (unsigned int j(1); j <= N[1]; ++j) {
+        for (unsigned int j(1); j <= N[1]; ++j) {
+            for (unsigned int i(1); i <= N[0]; ++i) {
                 m(u,i,j) += m(e,i,j);
             }
         }
