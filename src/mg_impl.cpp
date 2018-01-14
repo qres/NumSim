@@ -1,3 +1,4 @@
+#include "typedef.hpp"
 
 #include <cstring>
 #include <algorithm>
@@ -5,12 +6,8 @@
 #include <limits>
 
 // access matrix indices
-#define row_major (1)
-#if row_major
-#define get_matrix(a,i,j,N) ((a)[(i) * ((N)+2) + (j)])
-#else
-#define get_matrix(a,i,j,N) ((a)[(i) + (j) * ((N)+2)])
-#endif
+
+#define get_matrix(a,i,j,N) ((a)[(i) + (j) * ((N[0])+2)])
 #define get_matrix_NxN(a,i,j) (get_matrix(a,i,j,N))
 
 using std::max;
@@ -24,13 +21,16 @@ struct Grid2D {
         return 2;
     }
 
-    static unsigned int size_N(unsigned int N) {
-        return (N+2)*(N+2);
+    static unsigned int size_N(multi_index_t N) {
+        return (N[0]+2)*(N[1]+2);
     }
 
-    static unsigned int size_n(unsigned int N) {
-        unsigned int n = N/2;
-        return (n+2)*(n+2);
+    static unsigned int size_n(multi_index_t N) {
+        return (N[0]/2+2)*(N[1]/2+2);
+    }
+
+    static multi_index_t coarsen(multi_index_t N) {
+        return multi_index_t(N[0]/2, N[1]/2);
     }
 };
 
@@ -68,26 +68,17 @@ struct Fn_CPU_mem {
 };
 
 template<typename T>
-void print_vec(unsigned int count, const T* v, bool trailing_comma, std::ostream& out = std::cout) {
-    out << "[";
-    if (count > 0) out << v[0] << ",";
-    for (unsigned int i(1); i<count-1; ++i) {
-        out << v[i] << ", ";
-    }
-    if (count-1 > 0) out << v[count-1];
-    out << "]";
-    if (trailing_comma) out << ",";
-    out << std::endl;
-}
-
-template<typename T>
-T norm2_residuum_laplace(unsigned int N, const T* u, const T* b) {
+T norm2_residuum_laplace(multi_index_t N, const T* u, const T* b) {
     #define m get_matrix_NxN
     T sum = 0;
+
+    T hx = 1.0/(N[0] + 1);
+    T hy = 1.0/(N[1] + 1);
+
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N; ++i) {
-        for (unsigned int j(1); j<=N; ++j) {
-            T entry = m(b,i,j) + (N+1)*(N+1)*(4*m(u,i,j) - 1*m(u,i-1,j) - 1*m(u,i+1,j) - 1*m(u,i,j-1) - 1*m(u,i,j+1));
+    for (unsigned int i(1); i<=N[0]; ++i) {
+        for (unsigned int j(1); j<=N[1]; ++j) {
+            T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
     }
@@ -96,13 +87,17 @@ T norm2_residuum_laplace(unsigned int N, const T* u, const T* b) {
 }
 
 template<typename T>
-T norm2w_residuum_laplace(unsigned int N, const T* u, const T* b) {
+T norm2w_residuum_laplace(multi_index_t N, const T* u, const T* b) {
     #define m get_matrix_NxN
     T sum = 0;
+
+    T hx = 1.0/(N[0] + 1);
+    T hy = 1.0/(N[1] + 1);
+
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N; ++i) {
-        for (unsigned int j(1); j<=N; ++j) {
-            T entry = m(b,i,j) + (N+1)*(N+1)*(4*m(u,i,j) - 1*m(u,i-1,j) - 1*m(u,i+1,j) - 1*m(u,i,j-1) - 1*m(u,i,j+1));
+    for (unsigned int i(1); i<=N[0]; ++i) {
+        for (unsigned int j(1); j<=N[1]; ++j) {
+            T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
     }
@@ -111,13 +106,17 @@ T norm2w_residuum_laplace(unsigned int N, const T* u, const T* b) {
 }
 
 template<typename T>
-T normoo_residuum_laplace(unsigned int N, const T* u, const T* b) {
+T normoo_residuum_laplace(multi_index_t N, const T* u, const T* b) {
     #define m get_matrix_NxN
     T norm = 0;
+
+    T hx = 1.0/(N[0] + 1);
+    T hy = 1.0/(N[1] + 1);
+
     // only inner values as boundary is given
-    for (unsigned int i(1); i<=N; ++i) {
-        for (unsigned int j(1); j<=N; ++j) {
-            T entry = m(b,i,j) + (N+1)*(N+1)*(4*m(u,i,j) - 1*m(u,i-1,j) - 1*m(u,i+1,j) - 1*m(u,i,j-1) - 1*m(u,i,j+1));
+    for (unsigned int i(1); i<=N[0]; ++i) {
+        for (unsigned int j(1); j<=N[1]; ++j) {
+            T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             norm = max(norm,abs(entry));
         }
     }
@@ -126,19 +125,8 @@ T normoo_residuum_laplace(unsigned int N, const T* u, const T* b) {
 }
 
 template<typename T>
-T norm_residuum_laplace(unsigned int N, const T* u, const T* b) {
+T norm_residuum_laplace(multi_index_t N, const T* u, const T* b) {
     return normoo_residuum_laplace(N,u,b);
-}
-
-template<typename T>
-T norm2_sub(unsigned int N, const T* u_h, const T* u) {
-    T sum = 0;
-    // only inner values as boundary is given
-    for (unsigned int i(0); i<=N+1; ++i) {
-        T entry = u_h[i] - u[i];
-        sum += entry*entry;
-    }
-    return sqrt(sum);
 }
 
 template<typename T>
@@ -185,17 +173,19 @@ T norm_sub(const T* u_h, const T* u, unsigned int count) {
 }
 
 template<typename T>
-void residuum_laplace(unsigned int N, const T* u, const T* b, T* res) {
+void residuum_laplace(multi_index_t N, const T* u, const T* b, T* res) {
     #define m get_matrix_NxN
-    for (unsigned int i(0); i<=N+1; ++i) {
-        m(res,i,0) = 0;//m(b,i,0) - m(u,i,0);
-        m(res,0,i) = 0;//m(b,0,i) - m(u,0,i);
-        m(res,i,N+1) = 0;//m(b,i,N+1) - m(u,i,N+1);
-        m(res,N+1,i) = 0;//m(b,N+1,i) - m(u,N+1,i);
-    }
-    for (unsigned int i(1); i<=N; ++i) {
-        for (unsigned int j(1); j<=N; ++j) {
-            m(res,i,j) = m(b,i,j) + (N+1)*(N+1)*(4*m(u,i,j) - 1*m(u,i-1,j) - 1*m(u,i+1,j) - 1*m(u,i,j-1) - 1*m(u,i,j+1));
+
+    T hx = 1.0/(N[0] + 1);
+    T hy = 1.0/(N[1] + 1);
+
+    for (unsigned int i(0); i<=N[0]+1; ++i) {
+        for (unsigned int j(0); j<=N[1]+1; ++j) {
+            if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
+                m(res,i,j) = 0.0;
+            } else {
+                m(res,i,j) = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
+            }
         }
     }
     #undef m
@@ -225,10 +215,17 @@ void residuum_laplace(unsigned int N, const T* u, const T* b, T* res) {
  * Returns: #iters, v0 as approximation, v1 with the previous approximation
  */
 template<typename T>
-unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, unsigned int N, T* u0, T* u1, const T* b) {
+unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, multi_index_t N, T* u0, T* u1, const T* b) {
     T* const dst = u0;
     unsigned int iters = 1;
     T r = norm_residuum_laplace(N, u0, b);
+
+    T hx = 1.0/(N[0] + 1);
+    T hy = 1.0/(N[1] + 1);
+
+    real_t dxsq = hx * hx;
+    real_t dysq = hy * hy;
+
     while (iters <= max_iters && r >= max_r) {
         T r_old = r;
 
@@ -241,16 +238,17 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         #define m get_matrix_NxN
 
         // boundary is known
-        for (unsigned int i(0); i<=N+1; ++i) {
-            m(u1,i,0) = m(u0,i,0);
-            m(u1,0,i) = m(u0,0,i);
-            m(u1,i,N+1) = m(u0,i,N+1);
-            m(u1,N+1,i) = m(u0,N+1,i);
-        }
-        for (unsigned int i(1); i<=N; ++i) {
-            for (unsigned int j(1); j<=N; ++j) {
-                m(u1,i,j) = 0.25 * (-m(b,i,j) / ((N+1)*(N+1)) + m(u0,i-1,j) + m(u0,i+1,j) + m(u0,i,j-1) + m(u0,i,j+1));
-                m(u1,i,j) = (1.0-omega) * m(u0,i,j) + omega * m(u1,i,j);
+        for (unsigned int i(0); i<=N[0]+1; ++i) {
+            for (unsigned int j(0); j<=N[1]+1; ++j) {
+                if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
+                    m(u1,i,j) = m(u0,i,j);
+                } else {
+                    m(u1,i,j) = (1.0-omega) * m(u0,i,j) + omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
+                        (m(u0,i-1,j) + m(u0,i+1,j)) / dxsq +
+                        (m(u0,i,j-1) + m(u0,i,j+1)) / dysq +
+                        -m(b,i,j)
+                    );
+                }
             }
         }
 
@@ -264,7 +262,7 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
 #ifndef JACOBI_DONT_CHECK_RESIDUUM
         r = norm_residuum_laplace(N, u0, b);
         if (r == r_old) {
-          if (verbose) std::cerr << "breaking jacobi interation: no change. N=" << N << " iters=" << iters <<  " residuum=" << r << std::endl;
+          if (verbose) std::cerr << "breaking jacobi interation: no change. N=" << N[0] << "," << N[1] << " iters=" << iters <<  " residuum=" << r << std::endl;
           if (max_r != 0) break;
         }
 #endif
@@ -272,10 +270,10 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         ++iters;
     }
     if (verbose && iters == max_iters) {
-            std::cerr << "breaking jacobi interation: too many iterations. N=" << N << " iters=" << iters <<  " residuum=" << r << std::endl;
+            std::cerr << "breaking jacobi interation: too many iterations. N=" << N[0] << "," << N[1] << " iters=" << iters <<  " residuum=" << r << std::endl;
     }
     if (dst != u0) {
-        memcpy(dst, u0, (N+2)*(N+2) * sizeof(T));
+        memcpy(dst, u0, (N[0]+2)*(N[1]+2) * sizeof(T));
     }
     return iters - 1;
 }
@@ -287,7 +285,7 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
  * N: number of inner values of the fine grid [boundary, val, val boundary] => N = 2
  */
 template<typename T>
-unsigned int restrict_fw_2D(unsigned int N, const T* v_N, T* v_n) {
+multi_index_t restrict_fw_2D(multi_index_t N, const T* v_N, T* v_n) {
     /*     01     ....    NN+1
        |   11111111111111111   17 15
        Y   1 1 1 1 1 1 1 1 1   9  7
@@ -297,19 +295,21 @@ unsigned int restrict_fw_2D(unsigned int N, const T* v_N, T* v_n) {
     */
     #define _v_n(i,j) (get_matrix(v_n,i,j,n))
     #define _v_N(i,j) (get_matrix(v_N,i,j,N))
-    const unsigned int n = N/2;
+    const multi_index_t n (N[0]/2, N[1]/2);
     // keep boundary condition
-    for (unsigned int i(0); i<=N+1; i+=2) {
+    for (unsigned int i(0); i<=N[0]+1; i+=2) {
         _v_n(i/2, 0) = _v_N(i,0);
-        _v_n(0, i/2) = _v_N(0,i);
-        _v_n(i/2, n+1) = _v_N(i,N+1);
-        _v_n(n+1, i/2) = _v_N(N+1,i);
+        _v_n(i/2, n[1]+1) = _v_N(i,N[1]+1);
     }
-    _v_n(n+1, n+1) = _v_N(N+1,N+1);
+    for (unsigned int j(0); j<=N[1]+1; j+=2) {
+        _v_n(0, j/2) = _v_N(0,j);
+        _v_n(n[0]+1, j/2) = _v_N(N[0]+1,j);
+    }
+    _v_n(n[0]+1, n[1]+1) = _v_N(N[0]+1,N[1]+1);
 
     // stencil
-    for (unsigned int i(2); i<=N; i+=2) {
-        for (unsigned int j(2); j<=N; j+=2) {
+    for (unsigned int i(2); i<=N[0]; i+=2) {
+        for (unsigned int j(2); j<=N[1]; j+=2) {
             _v_n(i/2,j/2) = 1.0/16.0 * (
                 1*_v_N(i-1, j-1) + 2*_v_N(i, j-1) + 1*_v_N(i+1, j-1) +
                 2*_v_N(i-1, j  ) + 4*_v_N(i, j  ) + 2*_v_N(i+1, j  ) +
@@ -327,8 +327,8 @@ unsigned int restrict_fw_2D(unsigned int N, const T* v_N, T* v_n) {
  * n : number of inner values of the coarse grid [boundary, val, val boundary] => N = 2
  */
 template<typename T>
-unsigned int interplolate_2D(unsigned int n, const T* v_n, T* v_N) {
-    const unsigned int N = n*2 + 1;
+multi_index_t interplolate_2D(multi_index_t n, const T* v_n, T* v_N) {
+    const multi_index_t N (n[0]*2 + 1, n[1]*2 + 1);
     #define _v_n(i,j) (get_matrix(v_n,i,j,n))
     #define _v_N(i,j) (get_matrix(v_N,i,j,N))
     // keep boundary condition
@@ -340,11 +340,11 @@ unsigned int interplolate_2D(unsigned int n, const T* v_n, T* v_N) {
     0 0 0 0 0 0 0
     x 0 x 0 x 0 x
     */
-    for (unsigned int i(1); i<=n+1; ++i) {
-        for (unsigned int j(1); j<=n+1; ++j) {
-            if (2*i != N+1 && 2*j != N+1) _v_N(2*i,     2*j    ) = _v_n(i,j);
-            if (2*j != N+1)               _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
-            if (2*i != N+1)               _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
+    for (unsigned int i(1); i<=n[0]+1; ++i) {
+        for (unsigned int j(1); j<=n[1]+1; ++j) {
+            if (2*i != N[0]+1 && 2*j != N[1]+1) _v_N(2*i,     2*j    ) = _v_n(i,j);
+            if (2*j != N[1]+1)                  _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
+            if (2*i != N[0]+1)                  _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
             _v_N(2*i - 1, 2*j - 1) = 0.25 * (_v_n(i-1,j) + _v_n(i,j-1) + _v_n(i-1,j-1) + _v_n(i,j));
         }
     }
@@ -357,42 +357,42 @@ unsigned int interplolate_2D(unsigned int n, const T* v_n, T* v_N) {
 template<typename T>
 struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 
-    static void restrict(unsigned int N, const T* v_N, T* v_n) {
+    static void restrict(multi_index_t N, const T* v_N, T* v_n) {
         restrict_fw_2D(N, v_N, v_n);
     }
 
-    static void interpolate(unsigned int n, const T* v_n, T* v_N) {
+    static void interpolate(multi_index_t n, const T* v_n, T* v_N) {
         interplolate_2D(n, v_n, v_N);
     }
 
-    static T norm_residuum(unsigned int N, const T* u, const T* b, T* scratch = 0) {
+    static T norm_residuum(multi_index_t N, const T* u, const T* b, T* scratch = 0) {
         return  norm_residuum_laplace(N, u, b);
     }
 
-    static double norm(unsigned int N, const T* vec0) {
+    static double norm(multi_index_t N, const T* vec0) {
         return ::norm(vec0, size_N(N));
     }
 
-    static double norm_sub(unsigned int N, const T* vec0, const T* vec1, T* scratch = 0) {
+    static double norm_sub(multi_index_t N, const T* vec0, const T* vec1, T* scratch = 0) {
         return ::norm_sub(vec0, vec1, size_N(N));
     }
 
-    static void residuum(unsigned int N, const T* u, const T* b, T* res) {
+    static void residuum(multi_index_t N, const T* u, const T* b, T* res) {
         residuum_laplace(N, u, b, res);
     }
 
-    static unsigned int solve(unsigned int max_iters, double max_r, unsigned int N, T* u0, T* u1, const T* b, T* scratch = 0) {
+    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch = 0) {
         return jacobi_laplace(max_iters, max_r, 1.0, N, u0, u1, b);
     }
 
-    static unsigned int smooth(unsigned int max_iters, double max_r, unsigned int N, T* u0, T* u1, const T* b, T* scratch = 0) {
+    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch = 0) {
         return jacobi_laplace(max_iters, max_r, 4.0/5.0, N, u0, u1, b);
     }
 
-    static void add_correction(unsigned int N, T* u, const T* e) {
+    static void add_correction(multi_index_t N, T* u, const T* e) {
         #define m get_matrix_NxN
-        for (unsigned int i(1); i <= N; ++i) {
-            for (unsigned int j(1); j <= N; ++j) {
+        for (unsigned int i(1); i <= N[0]; ++i) {
+            for (unsigned int j(1); j <= N[1]; ++j) {
                 m(u,i,j) += m(e,i,j);
             }
         }
@@ -401,7 +401,7 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 };
 
 template<typename F, typename T>
-unsigned int solve_mg_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const T* _b) {
+unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const T* _b) {
     T** u0  = new T*[cfg.num_levels];
     T* scratch  = F::malloc_typed(F::size_N(N_coarse)); //can be used as ping pong buffer by all levels
     T** b = new T*[cfg.num_levels];
@@ -409,21 +409,24 @@ unsigned int solve_mg_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const 
     T** e_0 = new T*[cfg.num_levels];
     T** res0 = new T*[cfg.num_levels];
     T** res1 = new T*[cfg.num_levels];
-    unsigned int* N = new unsigned int[cfg.num_levels];
+    multi_index_t* N = new multi_index_t[cfg.num_levels];
 
     // preallocate memory
 #define single_buffer
 #ifdef single_buffer
     // use one large allocation for all memory needed
     unsigned int total_size = 0;
-    for (unsigned int i = 0, N_i = N_coarse; i < cfg.num_levels; ++i, N_i = N_i/2) {
+    multi_index_t N_i;
+    N_i = N_coarse;
+    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
         total_size += F::size_N(N_i);
     }
     // 6 buffer hirachies (minus _u0 and _b if they can be used directly)
     T* buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_coarse):0));
 
     T* ptr = buffer;
-    for (unsigned int i = 0, N_i = N_coarse; i < cfg.num_levels; ++i, N_i = N_i/2) {
+    N_i = N_coarse;
+    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
         if (i==0 && F::mem_device_host_equal()) {
             u0[i] = _u0;
             b[i] = const_cast<T*>(_b); // we will never overwrite this value
@@ -451,7 +454,8 @@ unsigned int solve_mg_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const 
     }
 #else
     // use different allcations
-    for (unsigned int i = 0, N_i = N_coarse; i < cfg.num_levels; ++i, N_i = N_i/2) {
+    N_i = N_coarse;
+    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::size_N(N_coarse)) {
         u0[i]  = (i==0 && F::mem_device_host_equal() ? _u0 : F::malloc_typed(F::size_N(N_i)));
         b[i] = (i==0 && F::mem_device_host_equal() ? _b : F::malloc_typed(F::size_N(N_i)));
         r_0[i] = F::malloc_typed(F::size_N(N_i));
@@ -589,7 +593,8 @@ unsigned int solve_mg_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const 
     }
     F::free_typed(buffer);
 #else
-    for (unsigned int i = 0, N_i = N_coarse; i < cfg.num_levels; ++i, N_i = N_i/2) {
+    N_i = N_coarse;
+    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = N_i/2) {
         if (i!=0 || !F::mem_device_host_equal()) {
             F::free_typed(u0[i]);
             F::free_typed(b[i]);
