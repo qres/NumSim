@@ -1,4 +1,7 @@
+
 #include <cstring>
+#include <algorithm>
+#include <math.h>
 #include <limits>
 
 // access matrix indices
@@ -398,7 +401,7 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 };
 
 template<typename F, typename T>
-unsigned int solve_v_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const T* _b) { // T* &_u0?
+unsigned int solve_mg_flat(const Cfg& cfg, unsigned int N_coarse, T* _u0, const T* _b) {
     T** u0  = new T*[cfg.num_levels];
     T* scratch  = F::malloc_typed(F::size_N(N_coarse)); //can be used as ping pong buffer by all levels
     T** b = new T*[cfg.num_levels];

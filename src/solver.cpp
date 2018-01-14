@@ -6,6 +6,7 @@
 #include "solver.hpp"
 #include "typedef.hpp"
 #include "flaggrid.hpp"
+#include "mg_impl.hpp"
 
 #include <iostream>
 #include <stdexcept>
@@ -151,9 +152,6 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
 
 }
 
-#include "mg_impl.cpp"
-
-
 Cfg_jacobi::Cfg_jacobi() :
     max_iters(100000000),
     max_res(1e-12) {
@@ -241,7 +239,7 @@ MultiGrid::~MultiGrid() {
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
-    solve_v_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size()[0], p->Data(), rhs->Data()); // TODO: different resolution in each dimenson
+    solve_mg_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size()[0], p->Data(), rhs->Data()); // TODO: different resolution in each dimension
     InteriorIterator it(this->_geom);
     // compute residual
     real_t res = 0;
