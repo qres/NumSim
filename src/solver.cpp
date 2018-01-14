@@ -153,6 +153,85 @@ real_t RedOrBlackSOR::BlackCycle(Grid *p, const Grid *rhs) const {
 
 #include "mg_impl.cpp"
 
+
+Cfg_jacobi::Cfg_jacobi() :
+    max_iters(100000000),
+    max_res(1e-12) {
+    //all done
+}
+
+Cfg_jacobi::Cfg_jacobi(unsigned int max_iters, double max_res) :
+    max_iters(max_iters),
+    max_res(max_res) {
+    //all done
+}
+
+
+Cfg_multigrid::Cfg_multigrid() :
+    max_iters(100000000),
+    max_res(1e-12),
+    max_iters_jacobi_pre(10),
+    max_res_jacobi_pre(1e-12),
+    max_iters_jacobi_post(10),
+    max_res_jacobi_post(1e-12) {
+    //all done
+}
+
+Cfg::Cfg() : num_levels(0), levels(0) {
+    //all done
+}
+
+Cfg::~Cfg() {
+    //delete[] levels; // TODO memory leak
+    levels = (Cfg_multigrid*)0xDEADBEEF;
+}
+
+Cfg Cfg::v_cycle(unsigned int max_iters, double max_res, unsigned int levels, unsigned int max_iters_pre_post, Cfg_jacobi inner) {
+    assert(levels > 0);
+    Cfg cfg = Cfg();
+    cfg.count_iters_like_single_grid = false;
+    cfg.num_levels = levels;
+    cfg.levels = new Cfg_multigrid[levels];
+    cfg.levels[0].max_iters = max_iters;
+    cfg.levels[0].max_res   = max_res;
+    cfg.levels[0].max_iters_jacobi_pre  = max_iters_pre_post;
+    cfg.levels[0].max_iters_jacobi_post = max_iters_pre_post;
+    cfg.levels[0].max_res_jacobi_pre  = max_res;
+    cfg.levels[0].max_res_jacobi_post = max_res;
+    for (unsigned int i(1); i < levels-1; ++i) {
+        cfg.levels[i].max_iters = 1;
+        cfg.levels[i].max_res   = max_res;
+        cfg.levels[i].max_iters_jacobi_pre  = max_iters_pre_post;
+        cfg.levels[i].max_iters_jacobi_post = max_iters_pre_post;
+        cfg.levels[i].max_res_jacobi_pre  = max_res;
+        cfg.levels[i].max_res_jacobi_post = max_res;
+    }
+    if (levels > 1) {
+        // if levels == 1 then levels[0] should contain max_iters, max_res
+        // not inner.max_iters, inner.max_res
+        // *_jacobi_{pre,post} is ignored any ways
+        cfg.levels[levels-1].max_iters = inner.max_iters;
+        cfg.levels[levels-1].max_res   = inner.max_res;
+        cfg.levels[levels-1].max_iters_jacobi_pre  = 0; // ignored
+        cfg.levels[levels-1].max_iters_jacobi_post = 0; // ignored
+        cfg.levels[levels-1].max_res_jacobi_pre  = 0; // ignored
+        cfg.levels[levels-1].max_res_jacobi_post = 0; // ignored
+    }
+    return cfg;
+}
+
+Cfg Cfg::two_grid(unsigned int max_iters, double max_res, unsigned int max_iters_pre_post, Cfg_jacobi inner) {
+    return v_cycle(max_iters, max_res, 2, max_iters_pre_post, inner);
+}
+
+Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
+    // inner jacobi doesen't exist --------------,
+    // and wont't be used                        v
+    Cfg cfg = v_cycle(max_iters, max_res, 1, 0, Cfg_jacobi(0,0));
+    cfg.count_iters_like_single_grid = true;
+    return cfg;
+}
+
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     this->_cfg = cfg;
 }
