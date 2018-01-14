@@ -401,9 +401,9 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 };
 
 template<typename F, typename T>
-unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, multi_real_t length, T* _u0, const T* _b) {
+unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t length, T* _u0, const T* _b) {
     T** u0  = new T*[cfg.num_levels];
-    T* scratch  = F::malloc_typed(F::size_N(N_coarse)); //can be used as ping pong buffer by all levels
+    T* scratch  = F::malloc_typed(F::size_N(N_fine)); //can be used as ping pong buffer by all levels
     T** b = new T*[cfg.num_levels];
     T** r_0 = new T*[cfg.num_levels];
     T** e_0 = new T*[cfg.num_levels];
@@ -417,15 +417,15 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, multi_real_t 
     // use one large allocation for all memory needed
     unsigned int total_size = 0;
     multi_index_t N_i;
-    N_i = N_coarse;
+    N_i = N_fine;
     for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
         total_size += F::size_N(N_i);
     }
     // 6 buffer hirachies (minus _u0 and _b if they can be used directly)
-    T* buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_coarse):0));
+    T* buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_fine):0));
 
     T* ptr = buffer;
-    N_i = N_coarse;
+    N_i = N_fine;
     for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
         if (i==0 && F::mem_device_host_equal()) {
             u0[i] = _u0;
@@ -449,13 +449,13 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, multi_real_t 
         N[i] = N_i;
     }
     if (!F::mem_device_host_equal()) {
-        F::memcpy_typed_HostToDevice(u0[0], _u0, F::size_N(N_coarse));
-        F::memcpy_typed_HostToDevice(b[0],  _b,  F::size_N(N_coarse));
+        F::memcpy_typed_HostToDevice(u0[0], _u0, F::size_N(N_fine));
+        F::memcpy_typed_HostToDevice(b[0],  _b,  F::size_N(N_fine));
     }
 #else
     // use different allcations
-    N_i = N_coarse;
-    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::size_N(N_coarse)) {
+    N_i = N_fine;
+    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::size_N(N_fine)) {
         u0[i]  = (i==0 && F::mem_device_host_equal() ? _u0 : F::malloc_typed(F::size_N(N_i)));
         b[i] = (i==0 && F::mem_device_host_equal() ? _b : F::malloc_typed(F::size_N(N_i)));
         r_0[i] = F::malloc_typed(F::size_N(N_i));
@@ -592,11 +592,11 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, multi_real_t 
 
 #ifdef single_buffer
     if (!F::mem_device_host_equal()) {
-        F::memcpy_typed_DeviceToHost(_u0, u0[0], F::size_N(N_coarse));
+        F::memcpy_typed_DeviceToHost(_u0, u0[0], F::size_N(N_fine));
     }
     F::free_typed(buffer);
 #else
-    N_i = N_coarse;
+    N_i = N_fine;
     for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = N_i/2) {
         if (i!=0 || !F::mem_device_host_equal()) {
             F::free_typed(u0[i]);
