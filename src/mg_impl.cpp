@@ -68,12 +68,12 @@ struct Fn_CPU_mem {
 };
 
 template<typename T>
-T norm2_residuum_laplace(multi_index_t N, const T* u, const T* b) {
+T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
     #define m get_matrix_NxN
     T sum = 0;
 
-    T hx = 1.0/(N[0] + 1);
-    T hy = 1.0/(N[1] + 1);
+    T hx = 1.0/(N[0] + 1) * length[0];
+    T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
     for (unsigned int i(1); i<=N[0]; ++i) {
@@ -87,12 +87,12 @@ T norm2_residuum_laplace(multi_index_t N, const T* u, const T* b) {
 }
 
 template<typename T>
-T norm2w_residuum_laplace(multi_index_t N, const T* u, const T* b) {
+T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
     #define m get_matrix_NxN
     T sum = 0;
 
-    T hx = 1.0/(N[0] + 1);
-    T hy = 1.0/(N[1] + 1);
+    T hx = 1.0/(N[0] + 1) * length[0];
+    T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
     for (unsigned int i(1); i<=N[0]; ++i) {
@@ -106,12 +106,12 @@ T norm2w_residuum_laplace(multi_index_t N, const T* u, const T* b) {
 }
 
 template<typename T>
-T normoo_residuum_laplace(multi_index_t N, const T* u, const T* b) {
+T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
     #define m get_matrix_NxN
     T norm = 0;
 
-    T hx = 1.0/(N[0] + 1);
-    T hy = 1.0/(N[1] + 1);
+    T hx = 1.0/(N[0] + 1) * length[0];
+    T hy = 1.0/(N[1] + 1) * length[1];
 
     // only inner values as boundary is given
     for (unsigned int i(1); i<=N[0]; ++i) {
@@ -125,8 +125,8 @@ T normoo_residuum_laplace(multi_index_t N, const T* u, const T* b) {
 }
 
 template<typename T>
-T norm_residuum_laplace(multi_index_t N, const T* u, const T* b) {
-    return normoo_residuum_laplace(N,u,b);
+T norm_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
+    return normoo_residuum_laplace(N,length,u,b);
 }
 
 template<typename T>
@@ -173,11 +173,11 @@ T norm_sub(const T* u_h, const T* u, unsigned int count) {
 }
 
 template<typename T>
-void residuum_laplace(multi_index_t N, const T* u, const T* b, T* res) {
+void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
     #define m get_matrix_NxN
 
-    T hx = 1.0/(N[0] + 1);
-    T hy = 1.0/(N[1] + 1);
+    T hx = 1.0/(N[0] + 1) * length[0];
+    T hy = 1.0/(N[1] + 1) * length[1];
 
     for (unsigned int i(0); i<=N[0]+1; ++i) {
         for (unsigned int j(0); j<=N[1]+1; ++j) {
@@ -215,13 +215,13 @@ void residuum_laplace(multi_index_t N, const T* u, const T* b, T* res) {
  * Returns: #iters, v0 as approximation, v1 with the previous approximation
  */
 template<typename T>
-unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, multi_index_t N, T* u0, T* u1, const T* b) {
+unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b) {
     T* const dst = u0;
     unsigned int iters = 1;
-    T r = norm_residuum_laplace(N, u0, b);
+    T r = norm_residuum_laplace(N, length, u0, b);
 
-    T hx = 1.0/(N[0] + 1);
-    T hy = 1.0/(N[1] + 1);
+    T hx = 1.0/(N[0] + 1) * length[0];
+    T hy = 1.0/(N[1] + 1) * length[1];
 
     real_t dxsq = hx * hx;
     real_t dysq = hy * hy;
@@ -260,7 +260,7 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         u0 = swap;
 
 #ifndef JACOBI_DONT_CHECK_RESIDUUM
-        r = norm_residuum_laplace(N, u0, b);
+        r = norm_residuum_laplace(N, length, u0, b);
         if (r == r_old) {
           if (verbose) std::cerr << "breaking jacobi interation: no change. N=" << N[0] << "," << N[1] << " iters=" << iters <<  " residuum=" << r << std::endl;
           if (max_r != 0) break;
@@ -365,8 +365,8 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
         interplolate_2D(n, v_n, v_N);
     }
 
-    static T norm_residuum(multi_index_t N, const T* u, const T* b, T* scratch = 0) {
-        return  norm_residuum_laplace(N, u, b);
+    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* scratch = 0) {
+        return  norm_residuum_laplace(N, length, u, b);
     }
 
     static double norm(multi_index_t N, const T* vec0) {
@@ -377,16 +377,16 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
         return ::norm_sub(vec0, vec1, size_N(N));
     }
 
-    static void residuum(multi_index_t N, const T* u, const T* b, T* res) {
-        residuum_laplace(N, u, b, res);
+    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
+        residuum_laplace(N, length, u, b, res);
     }
 
-    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch = 0) {
-        return jacobi_laplace(max_iters, max_r, 1.0, N, u0, u1, b);
+    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, T* scratch = 0) {
+        return jacobi_laplace(max_iters, max_r, 1.0, N, length, u0, u1, b);
     }
 
-    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch = 0) {
-        return jacobi_laplace(max_iters, max_r, 4.0/5.0, N, u0, u1, b);
+    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, T* scratch = 0) {
+        return jacobi_laplace(max_iters, max_r, 4.0/5.0, N, length, u0, u1, b);
     }
 
     static void add_correction(multi_index_t N, T* u, const T* e) {
@@ -401,7 +401,7 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 };
 
 template<typename F, typename T>
-unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const T* _b) {
+unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, multi_real_t length, T* _u0, const T* _b) {
     T** u0  = new T*[cfg.num_levels];
     T* scratch  = F::malloc_typed(F::size_N(N_coarse)); //can be used as ping pong buffer by all levels
     T** b = new T*[cfg.num_levels];
@@ -475,7 +475,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const
     unsigned int current_level = 0;
 
     r_old[current_level] = std::numeric_limits<T>::infinity();
-    F::residuum(N[current_level], u0[current_level], b[current_level], res1[current_level]);
+    F::residuum(N[current_level], length, u0[current_level], b[current_level], res1[current_level]);
     r[current_level] = F::norm(N[current_level], res1[current_level]);
 
     const int SWEEP_UP = 1;
@@ -516,11 +516,12 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const
                 cfg.levels[current_level].max_iters_jacobi_pre,
                 cfg.levels[current_level].max_res_jacobi_pre,
                 N[current_level],
+                length,
                 u0[current_level], scratch, b[current_level],
                 r_0[current_level]); //scratch: will be overwritten soon
 
             //residuum = b-Lu
-            F::residuum(N[current_level], u0[current_level], b[current_level], r_0[current_level]);
+            F::residuum(N[current_level], length, u0[current_level], b[current_level], r_0[current_level]);
 
             // solve Le = r
             F::restrict(N[current_level], r_0[current_level], b[current_level + 1]);
@@ -529,7 +530,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const
 
             //init new level
             iters[current_level+1] = 0;
-            F::residuum(N[current_level+1], u0[current_level+1], b[current_level+1], res1[current_level+1]);
+            F::residuum(N[current_level+1], length, u0[current_level+1], b[current_level+1], res1[current_level+1]);
             r[current_level+1] = F::norm(N[current_level+1], res1[current_level+1]);
             r_old[current_level+1] = std::numeric_limits<T>::infinity();
 
@@ -548,11 +549,12 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const
                 cfg.levels[current_level].max_iters_jacobi_post,
                 cfg.levels[current_level].max_res_jacobi_post,
                 N[current_level],
+                length,
                 u0[current_level], scratch, b[current_level],
                 res1[current_level]); //scratch: will be overwritten soon
 
             std::swap(res0[current_level], res1[current_level]);
-            F::residuum(N[current_level], u0[current_level], b[current_level], res1[current_level]);
+            F::residuum(N[current_level], length, u0[current_level], b[current_level], res1[current_level]);
 
             r_old[current_level] = r[current_level];
             r[current_level] = F::norm(N[current_level], res1[current_level]);
@@ -576,6 +578,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_coarse, T* _u0, const
                 cfg.levels[current_level].max_iters,
                 cfg.levels[current_level].max_res,
                 N[current_level],
+                length,
                 u0[current_level], scratch, b[current_level],
                 e_0[current_level]); //scratch: will be overwritten soon
             if (cfg.count_iters_like_single_grid) {

@@ -239,7 +239,7 @@ MultiGrid::~MultiGrid() {
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
-    solve_mg_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size(), p->Data(), rhs->Data()); // TODO: different resolution in each dimension
+    solve_mg_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size(), this->_geom->Length(), p->Data(), rhs->Data()); // TODO: different resolution in each dimension
     InteriorIterator it(this->_geom);
     // compute residual
     real_t res = 0;
