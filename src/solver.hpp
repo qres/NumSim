@@ -151,6 +151,10 @@ private:
     mutable solver_real_t** res0;
     mutable solver_real_t** res1;
     mutable multi_index_t* N;
+#ifdef MIXED_PRECISION
+    mutable solver_real_t* res_f32;
+    mutable solver_real_t* err_f32;
+#endif
 };
 
 #endif // __SOLVER_HPP

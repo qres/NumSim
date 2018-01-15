@@ -297,6 +297,14 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
         N[i] = N_i;
     }
 #endif
+
+#ifdef MIXED_PRECISION
+    unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
+
+    res_f32 = new solver_real_t[size_N];
+    err_f32 = new solver_real_t[size_N];
+    std::fill_n(res_f32, size_N, 0.0);
+#endif
 }
 
 MultiGrid::~MultiGrid() {
@@ -318,6 +326,11 @@ MultiGrid::~MultiGrid() {
     }
 #endif
 
+#ifdef MIXED_PRECISION
+    delete[] res_f32;
+    delete[] err_f32;
+#endif
+
 
     F::free_typed(scratch);
     delete[] N;
@@ -334,12 +347,6 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
     InteriorIterator it(this->_geom);
 
 #ifdef MIXED_PRECISION
-    unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
-
-    solver_real_t* res_f32 = new solver_real_t[size_N];
-    solver_real_t* err_f32 = new solver_real_t[size_N];
-    std::fill_n(res_f32, size_N, 0.0);
-    std::fill_n(err_f32, size_N, 0.0);
     // compute f32 residual
     for(it.First(); it.Valid(); it.Next()) {
         if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
@@ -347,6 +354,8 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
         }
     }
 
+    unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
+    std::fill_n(err_f32, size_N, 0.0);
     // solve for f32 error
     solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
 
@@ -355,9 +364,6 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
             p->Cell(it) += (real_t)err_f32[it.Value()];
         }
     }
-
-    delete[] res_f32;
-    delete[] err_f32;
 #else
     solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
 #endif
