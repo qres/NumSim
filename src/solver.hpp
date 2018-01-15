@@ -120,6 +120,14 @@ public:
     bool count_iters_like_single_grid;
 };
 
+#define MIXED_PRECISION
+
+#ifdef MIXED_PRECISION
+#define solver_real_t float
+#else
+#define solver_real_t real_t
+#endif
+
 class MultiGrid : public Solver {
 public:
     MultiGrid(const Geometry *geom, const Cfg* cfg);
@@ -133,15 +141,15 @@ private:
 
     const Cfg* _cfg;
 
-    mutable real_t* buffer;
+    mutable solver_real_t* buffer;
 
-    mutable real_t** u0;
-    mutable real_t* scratch;
-    mutable real_t** b;
-    mutable real_t** r_0;
-    mutable real_t** e_0;
-    mutable real_t** res0;
-    mutable real_t** res1;
+    mutable solver_real_t** u0;
+    mutable solver_real_t* scratch;
+    mutable solver_real_t** b;
+    mutable solver_real_t** r_0;
+    mutable solver_real_t** e_0;
+    mutable solver_real_t** res0;
+    mutable solver_real_t** res1;
     mutable multi_index_t* N;
 };
 

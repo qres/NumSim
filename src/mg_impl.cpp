@@ -62,7 +62,7 @@ struct Fn_CPU_mem {
     }
 
     /// sets `dst[0..count] = (T)0`
-    static void zero(double* dst, const unsigned int count) {
+    static void zero(T* dst, const unsigned int count) {
         std::fill_n(dst, count, (T)0 );
     }
 };

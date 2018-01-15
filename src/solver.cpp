@@ -231,20 +231,20 @@ Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
 }
 
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
-    typedef Fn_laplace<real_t> F;
+    typedef Fn_laplace<solver_real_t> F;
 
     multi_index_t N_fine = this->_geom->Size();
     multi_index_t N_i;
 
     this->_cfg = cfg;
 
-    u0  = new real_t*[_cfg->num_levels];
+    u0  = new solver_real_t*[_cfg->num_levels];
     scratch  = F::malloc_typed(F::size_N(N_fine)); //can be used as ping pong buffer by all levels
-    b = new real_t*[_cfg->num_levels];
-    r_0 = new real_t*[_cfg->num_levels];
-    e_0 = new real_t*[_cfg->num_levels];
-    res0 = new real_t*[_cfg->num_levels];
-    res1 = new real_t*[_cfg->num_levels];
+    b = new solver_real_t*[_cfg->num_levels];
+    r_0 = new solver_real_t*[_cfg->num_levels];
+    e_0 = new solver_real_t*[_cfg->num_levels];
+    res0 = new solver_real_t*[_cfg->num_levels];
+    res1 = new solver_real_t*[_cfg->num_levels];
     N = new multi_index_t[_cfg->num_levels];
 
     // preallocate memory
@@ -259,7 +259,7 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     // 6 buffer hirachies (minus _u0 and _b if they can be used directly)
     buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_fine):0));
 
-    real_t* ptr = buffer;
+    solver_real_t* ptr = buffer;
     N_i = N_fine;
     for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::coarsen(N_i)) {
         if (i==0 && F::mem_device_host_equal()) {
@@ -300,7 +300,7 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
 }
 
 MultiGrid::~MultiGrid() {
-    typedef Fn_laplace<real_t> F;
+    typedef Fn_laplace<solver_real_t> F;
 
 #ifdef single_buffer
     F::free_typed(buffer);
@@ -331,8 +331,37 @@ MultiGrid::~MultiGrid() {
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
-    solve_mg_flat<Fn_laplace<real_t>,real_t>(p->Data(), rhs->Data());
     InteriorIterator it(this->_geom);
+
+#ifdef MIXED_PRECISION
+    unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
+
+    solver_real_t* res_f32 = new solver_real_t[size_N];
+    solver_real_t* err_f32 = new solver_real_t[size_N];
+    std::fill_n(res_f32, size_N, 0.0);
+    std::fill_n(err_f32, size_N, 0.0);
+    // compute f32 residual
+    for(it.First(); it.Valid(); it.Next()) {
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            res_f32[it.Value()] = (solver_real_t)localRes(it, p, rhs);
+        }
+    }
+
+    // solve for f32 error
+    solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
+
+    for(it.First(); it.Valid(); it.Next()) {
+        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+            p->Cell(it) += (real_t)err_f32[it.Value()];
+        }
+    }
+
+    delete[] res_f32;
+    delete[] err_f32;
+#else
+    solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
+#endif
+
     // compute residual
     real_t res = 0;
     index_t count = 0;
