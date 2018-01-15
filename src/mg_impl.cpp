@@ -401,76 +401,23 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
 };
 
 template<typename F, typename T>
-unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t length, T* _u0, const T* _b) {
-    T** u0  = new T*[cfg.num_levels];
-    T* scratch  = F::malloc_typed(F::size_N(N_fine)); //can be used as ping pong buffer by all levels
-    T** b = new T*[cfg.num_levels];
-    T** r_0 = new T*[cfg.num_levels];
-    T** e_0 = new T*[cfg.num_levels];
-    T** res0 = new T*[cfg.num_levels];
-    T** res1 = new T*[cfg.num_levels];
-    multi_index_t* N = new multi_index_t[cfg.num_levels];
+unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
+    multi_index_t N_fine = this->_geom->Size();
+    multi_real_t length = this->_geom->Length();
 
-    // preallocate memory
-#define single_buffer
-#ifdef single_buffer
-    // use one large allocation for all memory needed
-    unsigned int total_size = 0;
-    multi_index_t N_i;
-    N_i = N_fine;
-    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
-        total_size += F::size_N(N_i);
-    }
-    // 6 buffer hirachies (minus _u0 and _b if they can be used directly)
-    T* buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_fine):0));
+    u0[0] = _u0;
+    b[0] = const_cast<T*>(_b); // we will never overwrite this value
 
-    T* ptr = buffer;
-    N_i = N_fine;
-    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::coarsen(N_i)) {
-        if (i==0 && F::mem_device_host_equal()) {
-            u0[i] = _u0;
-            b[i] = const_cast<T*>(_b); // we will never overwrite this value
-        } else {
-            u0[i] = ptr;
-            ptr += F::size_N(N_i);
-            b[i] = ptr;
-            ptr += F::size_N(N_i);
-        }
-
-        r_0[i] = ptr;
-        ptr += F::size_N(N_i);
-        e_0[i] = ptr;
-        ptr += F::size_N(N_i);
-        res0[i] = ptr;
-        ptr += F::size_N(N_i);
-        res1[i] = ptr;
-        ptr += F::size_N(N_i);
-
-        N[i] = N_i;
-    }
     if (!F::mem_device_host_equal()) {
         F::memcpy_typed_HostToDevice(u0[0], _u0, F::size_N(N_fine));
         F::memcpy_typed_HostToDevice(b[0],  _b,  F::size_N(N_fine));
     }
-#else
-    // use different allcations
-    N_i = N_fine;
-    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = F::size_N(N_fine)) {
-        u0[i]  = (i==0 && F::mem_device_host_equal() ? _u0 : F::malloc_typed(F::size_N(N_i)));
-        b[i] = (i==0 && F::mem_device_host_equal() ? _b : F::malloc_typed(F::size_N(N_i)));
-        r_0[i] = F::malloc_typed(F::size_N(N_i));
-        e_0[i] = F::malloc_typed(F::size_N(N_i));
-        res0[i] = F::malloc_typed(F::size_N(N_i));
-        res1[i] = F::malloc_typed(F::size_N(N_i));
-        N[i] = N_i;
-    }
-#endif
 
-    T* r = new T[cfg.num_levels];
-    T* r_old = new T[cfg.num_levels];
+    T* r = new T[_cfg->num_levels];
+    T* r_old = new T[_cfg->num_levels];
 
-    unsigned int* iters = new unsigned int[cfg.num_levels];
-    memset(iters, 0, cfg.num_levels * sizeof(unsigned int));
+    unsigned int* iters = new unsigned int[_cfg->num_levels];
+    memset(iters, 0, _cfg->num_levels * sizeof(unsigned int));
 
     unsigned int current_level = 0;
 
@@ -485,7 +432,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
 
     while(true) {
 
-        if (current_level == cfg.num_levels - 1) {
+        if (current_level == _cfg->num_levels - 1) {
             if (iters[current_level] == 0) {
                 next = SOLVE;
             } else {
@@ -496,7 +443,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
                 }
             }
         } else {
-            if (iters[current_level] < cfg.levels[current_level].max_iters && r[current_level] >= cfg.levels[current_level].max_res) {
+            if (iters[current_level] < _cfg->levels[current_level].max_iters && r[current_level] >= _cfg->levels[current_level].max_res) {
                 next = SWEEP_DOWN;
             } else {
                 if (current_level == 0) {
@@ -513,8 +460,8 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
             if(verbose) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << std::scientific << r[current_level] << std::endl;}
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "." << std::endl;}
             F::smooth(
-                cfg.levels[current_level].max_iters_jacobi_pre,
-                cfg.levels[current_level].max_res_jacobi_pre,
+                _cfg->levels[current_level].max_iters_jacobi_pre,
+                _cfg->levels[current_level].max_res_jacobi_pre,
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
@@ -546,8 +493,8 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
 
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "." << std::endl;}
             F::smooth(
-                cfg.levels[current_level].max_iters_jacobi_post,
-                cfg.levels[current_level].max_res_jacobi_post,
+                _cfg->levels[current_level].max_iters_jacobi_post,
+                _cfg->levels[current_level].max_res_jacobi_post,
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
@@ -561,7 +508,7 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
             if(verbose) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << std::scientific << r[current_level] << std::endl;}
 
             T res_diff = F::norm_sub(N[current_level], res0[current_level], res1[current_level], scratch);
-            if (res_diff < cfg.levels[0].max_res/pow(10,current_level)  || res_diff/ r_old[current_level] < cfg.levels[0].max_res/pow(10,current_level)) {
+            if (res_diff < _cfg->levels[0].max_res/pow(10,current_level)  || res_diff/ r_old[current_level] < _cfg->levels[0].max_res/pow(10,current_level)) {
                 if (verbose) {
                     for (unsigned int i = 0; i < current_level; ++i) std::cout << " ";
                     std::cout << (res_diff < 1e-12 ? "" : "res_diff | ") << (res_diff/r_old[current_level] < 1e-12 ? "" : "res_diff_rel") << std::endl;
@@ -575,47 +522,23 @@ unsigned int solve_mg_flat(const Cfg& cfg, multi_index_t N_fine, multi_real_t le
             iters[current_level]++;
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "." << std::endl;}
             unsigned int it = F::solve(
-                cfg.levels[current_level].max_iters,
-                cfg.levels[current_level].max_res,
+                _cfg->levels[current_level].max_iters,
+                _cfg->levels[current_level].max_res,
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
                 e_0[current_level]); //scratch: will be overwritten soon
-            if (cfg.count_iters_like_single_grid) {
+            if (_cfg->count_iters_like_single_grid) {
                 iters[current_level] = it;
             }
         }
     }
 
-    F::free_typed(scratch);
-    delete[] N;
-
 #ifdef single_buffer
     if (!F::mem_device_host_equal()) {
         F::memcpy_typed_DeviceToHost(_u0, u0[0], F::size_N(N_fine));
     }
-    F::free_typed(buffer);
-#else
-    N_i = N_fine;
-    for (unsigned int i = 0; i < cfg.num_levels; ++i, N_i = N_i/2) {
-        if (i!=0 || !F::mem_device_host_equal()) {
-            F::free_typed(u0[i]);
-            F::free_typed(b[i]);
-        }
-        F::free_typed(r_0[i]);
-        F::free_typed(e_0[i]);
-        F::free_typed(res0[i]);
-        F::free_typed(res1[i]);
-    }
 #endif
-
-    delete[] u0 ;
-    delete[] b;
-    delete[] r_0;
-    delete[] e_0;
-    delete[] res0;
-    delete[] res1;
-
     delete[] r;
     delete[] r_old;
 

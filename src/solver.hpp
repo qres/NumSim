@@ -128,7 +128,21 @@ public:
     real_t Cycle(Grid *grid, const Grid *rhs) const;
 
 private:
+    template<typename F, typename T>
+    unsigned int solve_mg_flat(T* _u0, const T* _b) const;
+
     const Cfg* _cfg;
+
+    mutable real_t* buffer;
+
+    mutable real_t** u0;
+    mutable real_t* scratch;
+    mutable real_t** b;
+    mutable real_t** r_0;
+    mutable real_t** e_0;
+    mutable real_t** res0;
+    mutable real_t** res1;
+    mutable multi_index_t* N;
 };
 
 #endif // __SOLVER_HPP

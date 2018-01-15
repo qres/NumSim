@@ -231,15 +231,107 @@ Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
 }
 
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
+    typedef Fn_laplace<real_t> F;
+
+    multi_index_t N_fine = this->_geom->Size();
+    multi_index_t N_i;
+
     this->_cfg = cfg;
+
+    u0  = new real_t*[_cfg->num_levels];
+    scratch  = F::malloc_typed(F::size_N(N_fine)); //can be used as ping pong buffer by all levels
+    b = new real_t*[_cfg->num_levels];
+    r_0 = new real_t*[_cfg->num_levels];
+    e_0 = new real_t*[_cfg->num_levels];
+    res0 = new real_t*[_cfg->num_levels];
+    res1 = new real_t*[_cfg->num_levels];
+    N = new multi_index_t[_cfg->num_levels];
+
+    // preallocate memory
+#define single_buffer
+#ifdef single_buffer
+    // use one large allocation for all memory needed
+    unsigned int total_size = 0;
+    N_i = N_fine;
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::coarsen(N_i)) {
+        total_size += F::size_N(N_i);
+    }
+    // 6 buffer hirachies (minus _u0 and _b if they can be used directly)
+    buffer = F::malloc_typed(total_size * 6 - (F::mem_device_host_equal()?2*F::size_N(N_fine):0));
+
+    real_t* ptr = buffer;
+    N_i = N_fine;
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::coarsen(N_i)) {
+        if (i==0 && F::mem_device_host_equal()) {
+            // set pointer later
+            u0[i] = 0;
+            b[i] = 0;
+        } else {
+            u0[i] = ptr;
+            ptr += F::size_N(N_i);
+            b[i] = ptr;
+            ptr += F::size_N(N_i);
+        }
+
+        r_0[i] = ptr;
+        ptr += F::size_N(N_i);
+        e_0[i] = ptr;
+        ptr += F::size_N(N_i);
+        res0[i] = ptr;
+        ptr += F::size_N(N_i);
+        res1[i] = ptr;
+        ptr += F::size_N(N_i);
+
+        N[i] = N_i;
+    }
+#else
+    // use different allcations
+    N_i = N_fine;
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::size_N(N_fine)) {
+        u0[i]  = (i==0 && F::mem_device_host_equal() ? 0 : F::malloc_typed(F::size_N(N_i)));
+        b[i] = (i==0 && F::mem_device_host_equal() ? 0 : F::malloc_typed(F::size_N(N_i)));
+        r_0[i] = F::malloc_typed(F::size_N(N_i));
+        e_0[i] = F::malloc_typed(F::size_N(N_i));
+        res0[i] = F::malloc_typed(F::size_N(N_i));
+        res1[i] = F::malloc_typed(F::size_N(N_i));
+        N[i] = N_i;
+    }
+#endif
 }
 
 MultiGrid::~MultiGrid() {
+    typedef Fn_laplace<real_t> F;
 
+#ifdef single_buffer
+    F::free_typed(buffer);
+#else
+    N_i = N_fine;
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = N_i/2) {
+        if (i!=0 || !F::mem_device_host_equal()) {
+            F::free_typed(u0[i]);
+            F::free_typed(b[i]);
+        }
+        F::free_typed(r_0[i]);
+        F::free_typed(e_0[i]);
+        F::free_typed(res0[i]);
+        F::free_typed(res1[i]);
+    }
+#endif
+
+
+    F::free_typed(scratch);
+    delete[] N;
+
+    delete[] u0 ;
+    delete[] b;
+    delete[] r_0;
+    delete[] e_0;
+    delete[] res0;
+    delete[] res1;
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
-    solve_mg_flat<Fn_laplace<real_t>>(*this->_cfg, this->_geom->Size(), this->_geom->Length(), p->Data(), rhs->Data()); // TODO: different resolution in each dimension
+    solve_mg_flat<Fn_laplace<real_t>,real_t>(p->Data(), rhs->Data());
     InteriorIterator it(this->_geom);
     // compute residual
     real_t res = 0;
