@@ -133,12 +133,14 @@ void Geometry::Load(const char *file) {
     }
 
     // print
-    index_t stride_y = this->_size[0] + 2;
-    for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
-        for (unsigned int i = 0; i <= this->_size[0] + 2 - 1; i++) {
-            std::cout << Flags().Data()[j*stride_y + i];
+    if (this->_size[0] <= 160 && this->_size[1] <= 160 && !default_geom) {
+        index_t stride_y = this->_size[0] + 2;
+        for (int j = this->_size[1] + 2 - 1; j >= 0; j--) {
+            for (unsigned int i = 0; i <= this->_size[0] + 2 - 1; i++) {
+                std::cout << Flags().Data()[j*stride_y + i];
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
     }
 
 }
