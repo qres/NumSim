@@ -69,7 +69,7 @@ Compute::Compute(const Geometry *geom, const Parameter *param, const Communicato
 
     #ifdef USE_MG
         this->_cfg = new Cfg();
-        *this->_cfg = Cfg::two_grid(3, 0.001, 5, Cfg_jacobi(500, 0.001)); // 3 iters with 5 pre a nd 5 post
+        *this->_cfg = Cfg::v_cycle(3, 0.001, 2, 4, Cfg_jacobi(500, 0.001)); // 3 iters with 5 pre a nd 5 post
         _solver = new MultiGrid(geom, this->_cfg);
     #elif defined USE_RB_SOR
         _solver = new RedOrBlackSOR(geom, param->Omega());

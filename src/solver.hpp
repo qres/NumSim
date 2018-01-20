@@ -141,6 +141,8 @@ private:
 
     const Cfg* _cfg;
 
+    char** flags;
+
     mutable solver_real_t* buffer;
 
     mutable solver_real_t** u0;

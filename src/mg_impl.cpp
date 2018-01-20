@@ -68,7 +68,7 @@ struct Fn_CPU_mem {
 };
 
 template<typename T>
-T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
+T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask) {
     #define m get_matrix_NxN
     T sum = 0;
 
@@ -78,6 +78,7 @@ T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const
     // only inner values as boundary is given
     for (unsigned int j(1); j<=N[1]; ++j) {
         for (unsigned int i(1); i<=N[0]; ++i) {
+            if (m(mask,i,j) != Flags::Fluid) continue;
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
@@ -87,7 +88,7 @@ T norm2_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const
 }
 
 template<typename T>
-T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
+T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask) {
     #define m get_matrix_NxN
     T sum = 0;
 
@@ -97,6 +98,7 @@ T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
     // only inner values as boundary is given
     for (unsigned int j(1); j<=N[1]; ++j) {
         for (unsigned int i(1); i<=N[0]; ++i) {
+            if (m(mask,i,j) != Flags::Fluid) continue;
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             sum += entry*entry;
         }
@@ -106,7 +108,7 @@ T norm2w_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
 }
 
 template<typename T>
-T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
+T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask) {
     #define m get_matrix_NxN
     T norm = 0;
 
@@ -116,6 +118,7 @@ T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
     // only inner values as boundary is given
     for (unsigned int j(1); j<=N[1]; ++j) {
         for (unsigned int i(1); i<=N[0]; ++i) {
+            if (m(mask,i,j) != Flags::Fluid) continue;
             T entry = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
             norm = max(norm,abs(entry));
         }
@@ -125,8 +128,8 @@ T normoo_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, cons
 }
 
 template<typename T>
-T norm_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b) {
-    return normoo_residuum_laplace(N,length,u,b);
+T norm_residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask) {
+    return normoo_residuum_laplace(N,length,u,b,mask);
 }
 
 template<typename T>
@@ -173,7 +176,7 @@ T norm_sub(const T* u_h, const T* u, unsigned int count) {
 }
 
 template<typename T>
-void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
+void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask, T* res) {
     #define m get_matrix_NxN
 
     T hx = 1.0/(N[0] + 1) * length[0];
@@ -181,7 +184,7 @@ void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T*
 
     for (unsigned int j(0); j<=N[1]+1; ++j) {
         for (unsigned int i(0); i<=N[0]+1; ++i) {
-            if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
+            if (m(mask,i,j) != Flags::Fluid) {
                 m(res,i,j) = 0.0;
             } else {
                 m(res,i,j) = m(b,i,j) - (m(u,i-1,j) -2*m(u,i,j) + m(u,i+1,j)) / hx/hx - (m(u,i,j-1) -2*m(u,i,j) +  m(u,i,j+1)) / hy/hy;
@@ -215,10 +218,10 @@ void residuum_laplace(multi_index_t N, multi_real_t length, const T* u, const T*
  * Returns: #iters, v0 as approximation, v1 with the previous approximation
  */
 template<typename T>
-unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b) {
+unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, const char* mask) {
     T* const dst = u0;
     unsigned int iters = 1;
-    T r = norm_residuum_laplace(N, length, u0, b);
+    T r = norm_residuum_laplace(N, length, u0, b, mask);
 
     T hx = 1.0/(N[0] + 1) * length[0];
     T hy = 1.0/(N[1] + 1) * length[1];
@@ -240,7 +243,7 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         // boundary is known
         for (unsigned int j(0); j<=N[1]+1; ++j) {
             for (unsigned int i(0); i<=N[0]+1; ++i) {
-                if (i==0 || j==0 || i == N[0]+1 || j == N[1]+1) {
+                if (m(mask,i,j) != Flags::Fluid) {
                     m(u1,i,j) = m(u0,i,j);
                 } else {
                     m(u1,i,j) = (1.0-omega) * m(u0,i,j) + omega * 0.5 * (dxsq*dysq) / (dxsq+dysq) * (
@@ -260,7 +263,7 @@ unsigned int jacobi_laplace(unsigned int max_iters, double max_r, double omega, 
         u0 = swap;
 
 #ifndef JACOBI_DONT_CHECK_RESIDUUM
-        r = norm_residuum_laplace(N, length, u0, b);
+        r = norm_residuum_laplace(N, length, u0, b, mask);
         if (r == r_old) {
           if (verbose) std::cerr << "breaking jacobi interation: no change. N=" << N[0] << "," << N[1] << " iters=" << iters <<  " residuum=" << r << std::endl;
           if (max_r != 0) break;
@@ -322,15 +325,58 @@ multi_index_t restrict_fw_2D(multi_index_t N, const T* v_N, T* v_n) {
     #undef _v_N
 }
 
+multi_index_t restrict_flags_2D(multi_index_t N, const char* v_N, char* v_n) {
+    /*     01     ....    NN+1
+       |   11111111111111111   17 15
+       Y   1 1 1 1 1 1 1 1 1   9  7
+       Y   1   1   1   1   1   5  3
+       Y   1       1       1   3  1
+       V   1               1   2  0
+    */
+    #define _v_n(i,j) (get_matrix(v_n,i,j,n))
+    #define _v_N(i,j) (get_matrix(v_N,i,j,N))
+    const multi_index_t n (N[0]/2, N[1]/2);
+    // keep boundary condition
+    for (unsigned int i(0); i<=N[0]+1; i+=2) {
+        _v_n(i/2, 0) = _v_N(i,0);
+        _v_n(i/2, n[1]+1) = _v_N(i,N[1]+1);
+    }
+    for (unsigned int j(0); j<=N[1]+1; j+=2) {
+        _v_n(0, j/2) = _v_N(0,j);
+        _v_n(n[0]+1, j/2) = _v_N(N[0]+1,j);
+    }
+    _v_n(n[0]+1, n[1]+1) = _v_N(N[0]+1,N[1]+1);
+
+    // stencil
+    for (unsigned int j(2); j<=N[1]; j+=2) {
+        for (unsigned int i(2); i<=N[0]; i+=2) {
+            // if one cell is not fluid the cell on the larger grid will be considered nonfluid
+            if (
+                _v_N(i-1, j-1) == Flags::Fluid && _v_N(i, j-1) == Flags::Fluid &&  _v_N(i+1, j-1) == Flags::Fluid &&
+                _v_N(i-1, j  ) == Flags::Fluid && _v_N(i, j  ) == Flags::Fluid &&  _v_N(i+1, j  ) == Flags::Fluid &&
+                _v_N(i-1, j+1) == Flags::Fluid && _v_N(i, j+1) == Flags::Fluid &&  _v_N(i+1, j+1) == Flags::Fluid
+            ) {
+                _v_n(i/2,j/2) = Flags::Fluid;
+            } else {
+                _v_n(i/2,j/2) = Flags::Inflow; // we dont care about the value as long it is != Flags::Fluid
+            }
+        }
+    }
+    return n;
+    #undef _v_n
+    #undef _v_N
+}
+
 /*
  * linear interpolation
  * n : number of inner values of the coarse grid [boundary, val, val boundary] => N = 2
  */
 template<typename T>
-multi_index_t interplolate_2D(multi_index_t n, const T* v_n, T* v_N) {
+multi_index_t interpolate_2D(multi_index_t n, const T* v_n, T* v_N, const char* mask_n) {
     const multi_index_t N (n[0]*2 + 1, n[1]*2 + 1);
     #define _v_n(i,j) (get_matrix(v_n,i,j,n))
     #define _v_N(i,j) (get_matrix(v_N,i,j,N))
+    #define _fluid(i,j) (get_matrix(mask_n,i,j,n) == Flags::Fluid)
     // keep boundary condition
     // interpolate
     /*
@@ -342,14 +388,16 @@ multi_index_t interplolate_2D(multi_index_t n, const T* v_n, T* v_N) {
     */
     for (unsigned int j(1); j<=n[1]+1; ++j) {
         for (unsigned int i(1); i<=n[0]+1; ++i) {
+            if (!_fluid(i,j)) continue;
             if (2*i != N[0]+1 && 2*j != N[1]+1) _v_N(2*i,     2*j    ) = _v_n(i,j);
-            if (2*j != N[1]+1)                  _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
-            if (2*i != N[0]+1)                  _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
-            _v_N(2*i - 1, 2*j - 1) = 0.25 * (_v_n(i-1,j) + _v_n(i,j-1) + _v_n(i-1,j-1) + _v_n(i,j));
+            if (2*j != N[1]+1 && _fluid(i-1,j)) _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
+            if (2*i != N[0]+1 && _fluid(i,j-1)) _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
+            if (_fluid(i-1,j-1) && _fluid(i,j-1) && _fluid(i-1,j)) _v_N(2*i - 1, 2*j - 1) = 0.25 * (_v_n(i-1,j) + _v_n(i,j-1) + _v_n(i-1,j-1) + _v_n(i,j));
         }
     }
 
     return N;
+    #undef _fluid
     #undef _v_n
     #undef _v_N
 }
@@ -361,12 +409,12 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
         restrict_fw_2D(N, v_N, v_n);
     }
 
-    static void interpolate(multi_index_t n, const T* v_n, T* v_N) {
-        interplolate_2D(n, v_n, v_N);
+    static void interpolate(multi_index_t n, const T* v_n, T* v_N, const char* mask_n) {
+        interpolate_2D(n, v_n, v_N, mask_n);
     }
 
-    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* scratch = 0) {
-        return  norm_residuum_laplace(N, length, u, b);
+    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask, T* scratch = 0) {
+        return  norm_residuum_laplace(N, length, u, b, mask);
     }
 
     static double norm(multi_index_t N, const T* vec0) {
@@ -377,23 +425,23 @@ struct Fn_laplace : Fn_CPU_mem<T>, Grid2D {
         return ::norm_sub(vec0, vec1, size_N(N));
     }
 
-    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
-        residuum_laplace(N, length, u, b, res);
+    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask, T* res) {
+        residuum_laplace(N, length, u, b, mask, res);
     }
 
-    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, T* scratch = 0) {
-        return jacobi_laplace(max_iters, max_r, 1.0, N, length, u0, u1, b);
+    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, const char* mask, T* scratch = 0) {
+        return jacobi_laplace(max_iters, max_r, 1.0, N, length, u0, u1, b, mask);
     }
 
-    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, T* scratch = 0) {
-        return jacobi_laplace(max_iters, max_r, 4.0/5.0, N, length, u0, u1, b);
+    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, const char* mask, T* scratch = 0) {
+        return jacobi_laplace(max_iters, max_r, 4.0/5.0, N, length, u0, u1, b, mask);
     }
 
-    static void add_correction(multi_index_t N, T* u, const T* e) {
+    static void add_correction(multi_index_t N, T* u, const T* e, const char* mask) {
         #define m get_matrix_NxN
         for (unsigned int j(1); j <= N[1]; ++j) {
             for (unsigned int i(1); i <= N[0]; ++i) {
-                m(u,i,j) += m(e,i,j);
+                if (m(mask,i,j) == Flags::Fluid) m(u,i,j) += m(e,i,j);
             }
         }
         #undef m
@@ -422,7 +470,7 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
     unsigned int current_level = 0;
 
     r_old[current_level] = std::numeric_limits<T>::infinity();
-    F::residuum(N[current_level], length, u0[current_level], b[current_level], res1[current_level]);
+    F::residuum(N[current_level], length, u0[current_level], b[current_level], flags[current_level], res1[current_level]);
     r[current_level] = F::norm(N[current_level], res1[current_level]);
 
     const int SWEEP_UP = 1;
@@ -465,10 +513,11 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
+                flags[current_level],
                 r_0[current_level]); //scratch: will be overwritten soon
 
             //residuum = b-Lu
-            F::residuum(N[current_level], length, u0[current_level], b[current_level], r_0[current_level]);
+            F::residuum(N[current_level], length, u0[current_level], b[current_level], flags[current_level], r_0[current_level]);
 
             // solve Le = r
             F::restrict(N[current_level], r_0[current_level], b[current_level + 1]);
@@ -477,7 +526,7 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
 
             //init new level
             iters[current_level+1] = 0;
-            F::residuum(N[current_level+1], length, u0[current_level+1], b[current_level+1], res1[current_level+1]);
+            F::residuum(N[current_level+1], length, u0[current_level+1], b[current_level+1], flags[current_level+1], res1[current_level+1]);
             r[current_level+1] = F::norm(N[current_level+1], res1[current_level+1]);
             r_old[current_level+1] = std::numeric_limits<T>::infinity();
 
@@ -487,8 +536,8 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
         } else if (next == SWEEP_UP) {
             // up-sweep
             current_level--;
-            F::interpolate(N[current_level+1], u0[current_level+1], e_0[current_level]);
-            F::add_correction(N[current_level], u0[current_level], e_0[current_level]);
+            F::interpolate(N[current_level+1], u0[current_level+1], e_0[current_level], flags[current_level+1]);
+            F::add_correction(N[current_level], u0[current_level], e_0[current_level], flags[current_level]);
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "/" << std::endl;}
 
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "." << std::endl;}
@@ -498,10 +547,11 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
+                flags[current_level],
                 res1[current_level]); //scratch: will be overwritten soon
 
             std::swap(res0[current_level], res1[current_level]);
-            F::residuum(N[current_level], length, u0[current_level], b[current_level], res1[current_level]);
+            F::residuum(N[current_level], length, u0[current_level], b[current_level], flags[current_level], res1[current_level]);
 
             r_old[current_level] = r[current_level];
             r[current_level] = F::norm(N[current_level], res1[current_level]);
@@ -527,6 +577,7 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
                 N[current_level],
                 length,
                 u0[current_level], scratch, b[current_level],
+                flags[current_level],
                 e_0[current_level]); //scratch: will be overwritten soon
             if (_cfg->count_iters_like_single_grid) {
                 iters[current_level] = it;

@@ -232,6 +232,7 @@ Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
 
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     typedef Fn_laplace<solver_real_t> F;
+    typedef Fn_laplace<char> FLAGS;
 
     multi_index_t N_fine = this->_geom->Size();
     multi_index_t N_i;
@@ -287,7 +288,7 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
 #else
     // use different allcations
     N_i = N_fine;
-    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::size_N(N_fine)) {
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = F::coarsen(N_i)) {
         u0[i]  = (i==0 && F::mem_device_host_equal() ? 0 : F::malloc_typed(F::size_N(N_i)));
         b[i] = (i==0 && F::mem_device_host_equal() ? 0 : F::malloc_typed(F::size_N(N_i)));
         r_0[i] = F::malloc_typed(F::size_N(N_i));
@@ -305,6 +306,22 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     err_f32 = new solver_real_t[size_N];
     std::fill_n(res_f32, size_N, 0.0);
 #endif
+
+    // prepare flags for the hierarchy
+    unsigned int num_levels = cfg->num_levels;
+    this->flags = new char*[num_levels];
+    N_i = N_fine;
+    multi_index_t N_im1 = N_fine;
+    for (unsigned int i = 0; i < num_levels; ++i, N_i = F::coarsen(N_i), N_im1 = F::coarsen(N_im1)) {
+        if (i==1) N_im1 = N_fine;
+        if (i != 0) {
+            this->flags[i] = FLAGS::malloc_typed(F::size_N(N_i));
+            // run restriction
+            restrict_flags_2D(N_im1, flags[i-1], flags[i]);
+        } else {
+            this->flags[0] = const_cast<char*>(this->_geom->Flags().Data()); // we won't touch this data
+        }
+    }
 }
 
 MultiGrid::~MultiGrid() {
@@ -341,6 +358,14 @@ MultiGrid::~MultiGrid() {
     delete[] e_0;
     delete[] res0;
     delete[] res1;
+
+    // prepare flags for the hierarchy
+    unsigned int num_levels = this->_cfg->num_levels;
+    for (unsigned int i = 1; i < num_levels; ++i) {
+        // flags[0] points at the initial flag grid and must not be deleted
+        delete[] this->flags[i];
+    }
+    delete this->flags;
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {

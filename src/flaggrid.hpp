@@ -67,6 +67,7 @@ public:
     void set_driven_cavity();
 
     char* Data();
+    const char* Data() const;
 
 private:
     char* _data;

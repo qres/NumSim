@@ -91,3 +91,7 @@ void FlagGrid::set_driven_cavity() {
 char* FlagGrid::Data() {
     return this->_data;
 }
+
+const char* FlagGrid::Data() const {
+    return this->_data;
+}
