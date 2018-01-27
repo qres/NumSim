@@ -111,7 +111,7 @@ namespace cuda {
      *
      */
     __global__
-    void residuum_neg_laplace(const double* u, const double* b, double* res, const multi_index_t N) {
+    void residuum_neg_laplace(const double* u, const double* b, double* res, multi_index_t N, multi_real_t length) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -123,12 +123,12 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            res[ix] = b[ix] - (N[0]+1)*(N[1]+1)*(4*u[ix] - 1*u[im1_j] - 1*u[ip1_j] - 1*u[i_jm1] - 1*u[i_jp1]);
+            res[ix] = b[ix] - (N[0]+1)*(N[1]+1)/length[0]/length[1]*(4*u[ix] - 1*u[im1_j] - 1*u[ip1_j] - 1*u[i_jm1] - 1*u[i_jp1]);
         }
     }
 
     __global__
-    void jacobi_step_neg_laplace(double omega, const double* u0, double* u1, const double* b, multi_index_t N) {
+    void jacobi_step_neg_laplace(double omega, const double* u0, double* u1, const double* b, multi_index_t N, multi_real_t length) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -141,14 +141,14 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) * length[0] * length[1] + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
 
     // treads: N*N, one thread per per inner grid point
     __global__
-    void jacobi_step_neg_laplace_inner(double omega, const double* u0, double* u1, const double* b, multi_index_t N) {
+    void jacobi_step_neg_laplace_inner(double omega, const double* u0, double* u1, const double* b, multi_index_t N, multi_real_t length) {
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -158,7 +158,7 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) * length[0] * length[1] + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
@@ -324,10 +324,10 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         cuchck_last();
     }
 
-    static void residuum(multi_index_t N, const T* u, const T* b, T* res) {
+    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
         dim3 block(2, 64, 1);
         dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
-        cuda::residuum_neg_laplace<<<grid, block>>>(u, b, res, N);
+        cuda::residuum_neg_laplace<<<grid, block>>>(u, b, res, N, length);
         cuchck_last();
     }
 
@@ -335,13 +335,13 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         return ::norm_cu(vec0, size_N(N));
     }
 
-    static T norm_residuum(multi_index_t N, const T* u, const T* b, T* scratch) {
-      residuum(N, u, b, scratch);
+    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* scratch) {
+      residuum(N, length, u, b, scratch);
       return norm_cu(scratch, size_N(N));
     }
 
     // TODO scratch buffer might be obsolate
-    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, multi_index_t N, T* scratch) {
+    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, multi_index_t N, multi_real_t length, T* scratch) {
         // as we copy (only if we have to) the result back to u0, which has its
         // initialized, we can also only interate on the inner points, if
         // we initialize the u1 borders first
@@ -352,16 +352,16 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
 
         T * const dst = u0;
         unsigned int iters = 1;
-        T r = norm_residuum(N, u0, b, u1);
+        T r = norm_residuum(N, length, u0, b, u1);
         while (iters <= max_iters && r >= max_r) {
             T r_old = r;
 
             // as mcpy will cause a sync, we spend one more block in the first iteration
             // to initialize the borders in u1
             if (iters == 1) {
-                cuda::jacobi_step_neg_laplace<<<grid_all, block>>>(omega, u0, u1, b, N);
+                cuda::jacobi_step_neg_laplace<<<grid_all, block>>>(omega, u0, u1, b, N, length);
             } else {
-                cuda::jacobi_step_neg_laplace_inner<<<grid_inner, block>>>(omega, u0, u1, b, N);
+                cuda::jacobi_step_neg_laplace_inner<<<grid_inner, block>>>(omega, u0, u1, b, N, length);
             }
             cuchck_last();
 
@@ -369,7 +369,7 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
             // swap input and output
             std::swap(u0, u1);
 
-            r = norm_residuum(N, u0, b, scratch);
+            r = norm_residuum(N, length, u0, b, scratch);
             ++iters;
 
             if (r == r_old) {
@@ -382,11 +382,11 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         return iters - 1;
     }
 
-    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
+    static unsigned int solve(unsigned int max_iters, multi_real_t length, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
         return _jacobi(max_iters, max_r, 1.0, u0, u1, b, N, scratch);
     }
 
-    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
+    static unsigned int smooth(unsigned int max_iters, multi_real_t length, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
         return _jacobi(max_iters, max_r, 4.0/5.0, u0, u1, b, N, scratch);
     }
 
