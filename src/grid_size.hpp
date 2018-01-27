@@ -1,3 +1,6 @@
+#ifndef GRID_SIZE_HPP
+#define GRID_SIZE_HPP
+
 #include "typedef.hpp"
 
 struct Grid2D {
@@ -17,3 +20,5 @@ struct Grid2D {
         return multi_index_t(N[0]/2, N[1]/2);
     }
 };
+
+#endif
