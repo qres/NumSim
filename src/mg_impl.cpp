@@ -1,4 +1,5 @@
 #include "typedef.hpp"
+#include "grid_size.hpp"
 
 #include <cstring>
 #include <algorithm>
@@ -15,24 +16,6 @@ using std::abs;
 
 bool verbose = false;
 bool verbose_levels = false;
-
-struct Grid2D {
-    static unsigned int dim() {
-        return 2;
-    }
-
-    static unsigned int size_N(multi_index_t N) {
-        return (N[0]+2)*(N[1]+2);
-    }
-
-    static unsigned int size_n(multi_index_t N) {
-        return (N[0]/2+2)*(N[1]/2+2);
-    }
-
-    static multi_index_t coarsen(multi_index_t N) {
-        return multi_index_t(N[0]/2, N[1]/2);
-    }
-};
 
 template<typename T>
 struct Fn_CPU_mem {
