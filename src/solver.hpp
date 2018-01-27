@@ -120,7 +120,8 @@ public:
     bool count_iters_like_single_grid;
 };
 
-#define MIXED_PRECISION
+#define USE_CUDA
+//#define MIXED_PRECISION
 
 #ifdef MIXED_PRECISION
 #define solver_real_t float
@@ -143,6 +144,13 @@ private:
 
     char** flags;
 
+    // these are ignored if we don't use cuda
+    mutable real_t* d_u0_f64;
+    mutable real_t* d_b_f64;
+    mutable solver_real_t* d_res_f32;
+    mutable solver_real_t* d_err0_f32;
+
+    // this contains all the data if we only use a single allcoation
     mutable solver_real_t* buffer;
 
     mutable solver_real_t** u0;

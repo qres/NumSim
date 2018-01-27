@@ -47,16 +47,18 @@ T norm_cu(const T* vec, unsigned int count) {
 
 namespace cuda {
 
+    template<typename T>
     __global__
-    void add(double* dst, const double* lhs, const double* rhs, const unsigned int count) {
+    void add(T* dst, const T* lhs, const T* rhs, const unsigned int count) {
         const int i (threadIdx.x + blockDim.x * blockIdx.x);
         if (i < count) {
             dst[i] = lhs[i] + rhs[i];
         }
     }
 
+    template<typename T>
     __global__
-    void sub(double* dst, const double* lhs, const double* rhs, const unsigned int count) {
+    void sub(T* dst, const T* lhs, const T* rhs, const unsigned int count) {
         const int i (threadIdx.x + blockDim.x * blockIdx.x);
         if (i < count) {
             dst[i] = lhs[i] - rhs[i];
@@ -65,16 +67,18 @@ namespace cuda {
 }
 
 namespace cuda {
+    template<typename T>
     __global__
-    void zerof64(double* dst, const unsigned int count) {
+    void zerof64(T* dst, const unsigned int count) {
         const int i (threadIdx.x + blockDim.x * blockIdx.x);
         if (i < count) {
             dst[i] = 0.0;
         }
     }
 
+    template<typename T>
     __global__
-    void addAssign(double* dst, const double* vec, const unsigned int count) {
+    void addAssign(T* dst, const T* vec, const unsigned int count) {
         const int i (threadIdx.x + blockDim.x * blockIdx.x);
         if (i < count) {
             dst[i] += vec[i];
@@ -110,8 +114,9 @@ namespace cuda {
      *
      *
      */
+    template<typename T>
     __global__
-    void residuum_neg_laplace(const double* u, const double* b, double* res, multi_index_t N, multi_real_t length) {
+    void residuum_neg_laplace(const T* u, const T* b, T* res, multi_index_t N, multi_real_t length) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -127,8 +132,9 @@ namespace cuda {
         }
     }
 
+    template<typename T>
     __global__
-    void jacobi_step_neg_laplace(double omega, const double* u0, double* u1, const double* b, multi_index_t N, multi_real_t length) {
+    void jacobi_step_neg_laplace(double omega, const T* u0, T* u1, const T* b, multi_index_t N, multi_real_t length) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -147,8 +153,9 @@ namespace cuda {
     }
 
     // treads: N*N, one thread per per inner grid point
+    template<typename T>
     __global__
-    void jacobi_step_neg_laplace_inner(double omega, const double* u0, double* u1, const double* b, multi_index_t N, multi_real_t length) {
+    void jacobi_step_neg_laplace_inner(double omega, const T* u0, T* u1, const T* b, multi_index_t N, multi_real_t length) {
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
@@ -163,8 +170,9 @@ namespace cuda {
         }
     }
 
+    template<typename T>
     __global__
-    void restrict_fw_2D(const double* v_N, double* v_n, multi_index_t N, multi_index_t n) {
+    void restrict_fw_2D(const T* v_N, T* v_n, multi_index_t N, multi_index_t n) {
         // big indices for 'N'-Matrices, small indices for 'n'-Matrices
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
@@ -195,8 +203,9 @@ namespace cuda {
         }
     }
 
+    template<typename T>
     __global__
-    void interpolate_2D(const double* v_n, double* v_N, multi_index_t n, multi_index_t N) {
+    void interpolate_2D(const T* v_n, T* v_N, multi_index_t n, multi_index_t N) {
         // big indices for 'N'-Matrices, small indices for 'n'-Matrices
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
@@ -257,8 +266,9 @@ namespace cuda {
     }
 
     // treads N*N: one thrad per inner grid point
+    template<typename T>
     __global__
-    void addAssign2Dinner(double* dst, const double* vec, multi_index_t N) {
+    void addAssign2Dinner(T* dst, const T* vec, multi_index_t N) {
         // index 0 is on the border
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
@@ -307,7 +317,7 @@ struct Fn_CUDA_mem {
 };
 
 template<typename T>
-struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
+struct Fn_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
     static void restrict(multi_index_t N, const T* v_N, T* v_n) {
         const multi_index_t n = coarsen(N);
         dim3 block(1, 512, 1);
@@ -316,7 +326,7 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         cuchck_last();
     }
 
-    static void interpolate(multi_index_t n, const T* v_n, T* v_N) {
+    static void interpolate(multi_index_t n, const T* v_n, T* v_N, const char* mask) {
         const multi_index_t N (n[0]*2 + 1, n[1]*2 + 1);
         dim3 block(1, 512, 1);
         dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
@@ -324,24 +334,24 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         cuchck_last();
     }
 
-    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* res) {
+    static void residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask, T* res) {
         dim3 block(2, 64, 1);
         dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
         cuda::residuum_neg_laplace<<<grid, block>>>(u, b, res, N, length);
         cuchck_last();
     }
 
-    static double norm(multi_index_t N, const T* vec0) {
+    static T norm(multi_index_t N, const T* vec0) {
         return ::norm_cu(vec0, size_N(N));
     }
 
-    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, T* scratch) {
-      residuum(N, length, u, b, scratch);
+    static T norm_residuum(multi_index_t N, multi_real_t length, const T* u, const T* b, const char* mask, T* scratch) {
+      residuum(N, length, u, b, mask, scratch);
       return norm_cu(scratch, size_N(N));
     }
 
     // TODO scratch buffer might be obsolate
-    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, multi_index_t N, multi_real_t length, T* scratch) {
+    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, multi_index_t N, multi_real_t length, const char* mask, T* scratch) {
         // as we copy (only if we have to) the result back to u0, which has its
         // initialized, we can also only interate on the inner points, if
         // we initialize the u1 borders first
@@ -352,7 +362,7 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
 
         T * const dst = u0;
         unsigned int iters = 1;
-        T r = norm_residuum(N, length, u0, b, u1);
+        T r = norm_residuum(N, length, u0, b, mask, u1);
         while (iters <= max_iters && r >= max_r) {
             T r_old = r;
 
@@ -369,7 +379,7 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
             // swap input and output
             std::swap(u0, u1);
 
-            r = norm_residuum(N, length, u0, b, scratch);
+            r = norm_residuum(N, length, u0, b, mask, scratch);
             ++iters;
 
             if (r == r_old) {
@@ -382,12 +392,12 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         return iters - 1;
     }
 
-    static unsigned int solve(unsigned int max_iters, multi_real_t length, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
-        return _jacobi(max_iters, max_r, 1.0, u0, u1, b, N, scratch);
+    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, const char* mask, T* scratch) {
+        return _jacobi(max_iters, max_r, 1.0, u0, u1, b, N, length, mask, scratch);
     }
 
-    static unsigned int smooth(unsigned int max_iters, multi_real_t length, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
-        return _jacobi(max_iters, max_r, 4.0/5.0, u0, u1, b, N, scratch);
+    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, multi_real_t length, T* u0, T* u1, const T* b, const char* mask, T* scratch) {
+        return _jacobi(max_iters, max_r, 4.0/5.0, u0, u1, b, N, length, mask, scratch);
     }
 
     static double norm_sub(multi_index_t N, const T* vec0, const T* vec1, T* scratch) {
@@ -398,10 +408,16 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         return norm_cu(scratch, size_N(N));
     }
 
-    static void add_correction(multi_index_t N, T* u, const T* e) {
+    static void add_correction(multi_index_t N, T* u, const T* e, const char* mask) {
         dim3 block(1, 512, 1);
         dim3 grid((unsigned)ceil(N[0]/(double)block.x), (unsigned)ceil(N[1]/(double)block.y), 1);
         cuda::addAssign2Dinner<<<grid, block>>>(u, e, N); //update only inner points
         cuchck_last();
     }
 };
+
+// explicit instantiations
+template struct Fn_CUDA_mem<float>;
+template struct Fn_CUDA_mem<double>;
+template struct Fn_laplace_cuda<float>;
+template struct Fn_laplace_cuda<double>;

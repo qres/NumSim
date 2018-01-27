@@ -7,6 +7,7 @@
 #include "typedef.hpp"
 #include "flaggrid.hpp"
 #include "mg_impl.hpp"
+#include "mg_impl.cuh"
 
 #include <iostream>
 #include <stdexcept>
@@ -232,7 +233,9 @@ Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
 
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     typedef Fn_laplace<solver_real_t> F;
+    typedef Fn_laplace<real_t> F_f64;
     typedef Fn_laplace<char> FLAGS;
+    typedef Fn_laplace_cuda<char> F_CUDA;
 
     multi_index_t N_fine = this->_geom->Size();
     multi_index_t N_i;
@@ -322,10 +325,16 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
             this->flags[0] = const_cast<char*>(this->_geom->Flags().Data()); // we won't touch this data
         }
     }
+
+#ifdef USE_CUDA
+    this->d_u0_f64 = F_f64::malloc_typed(F_f64::size_N(N_fine));
+    this->d_b_f64 = F_f64::malloc_typed(F_f64::size_N(N_fine));
+#endif
 }
 
 MultiGrid::~MultiGrid() {
     typedef Fn_laplace<solver_real_t> F;
+    typedef Fn_laplace_cuda<real_t> F_CUDA_F64;
 
 #ifdef single_buffer
     F::free_typed(buffer);
@@ -366,32 +375,46 @@ MultiGrid::~MultiGrid() {
         delete[] this->flags[i];
     }
     delete this->flags;
+
+
+#ifdef USE_CUDA
+    F_CUDA_F64::free_typed(this->d_u0_f64);
+    F_CUDA_F64::free_typed(this->d_b_f64);
+#endif
 }
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
     InteriorIterator it(this->_geom);
 
-#ifdef MIXED_PRECISION
-    // compute f32 residual
-    for(it.First(); it.Valid(); it.Next()) {
-        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
-            res_f32[it.Value()] = (solver_real_t)localRes(it, p, rhs);
-        }
-    }
+    #ifdef USE_CUDA
+        typedef Fn_laplace_cuda<real_t> F_CUDA;
+        unsigned int size_N = F_CUDA::size_N(this->_geom->Size());
+        F_CUDA::memcpy_typed_HostToDevice(this->d_u0_f64, p->Data(),   size_N);
+        F_CUDA::memcpy_typed_HostToDevice(this->d_b_f64, rhs->Data(), size_N);
+        solve_mg_flat<F_CUDA>(this->d_u0_f64, this->d_b_f64);
+    #else
+        #ifdef MIXED_PRECISION
+            // compute f32 residual
+            for(it.First(); it.Valid(); it.Next()) {
+                if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+                    res_f32[it.Value()] = (solver_real_t)localRes(it, p, rhs);
+                }
+            }
 
-    unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
-    std::fill_n(err_f32, size_N, 0.0);
-    // solve for f32 error
-    solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
+            unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
+            std::fill_n(err_f32, size_N, 0.0);
+            // solve for f32 error
+            solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
 
-    for(it.First(); it.Valid(); it.Next()) {
-        if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
-            p->Cell(it) += (real_t)err_f32[it.Value()];
-        }
-    }
-#else
-    solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
-#endif
+            for(it.First(); it.Valid(); it.Next()) {
+                if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
+                    p->Cell(it) += (real_t)err_f32[it.Value()];
+                }
+            }
+        #else
+            solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
+        #endif
+    #endif
 
     // compute residual
     real_t res = 0;
