@@ -83,7 +83,7 @@ namespace cuda {
 
     //http://developer.download.nvidia.com/compute/cuda/1.1-Beta/x86_website/projects/reduction/doc/reduction.pdf
     void reduce_sum() {
-        assert(0);
+        std::cout << "ERR reduce sum" << std::endl;
     }
 }
 
@@ -111,67 +111,67 @@ namespace cuda {
      *
      */
     __global__
-    void residuum_neg_laplace(const double* u, const double* b, double* res, const unsigned int N) {
+    void residuum_neg_laplace(const double* u, const double* b, double* res, const multi_index_t N) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (N+2) + j);
+        const int ix (i + j * (N[0] + 2));
 
-        if ((i <= N+1 && j <= N+1) && (i == 0 || j == 0 || i == N+1 || j == N+1)) {
+        if ((i <= N[0]+1 && j <= N[1]+1) && (i == 0 || j == 0 || i == N[0]+1 || j == N[1]+1)) {
             res[ix] = 0;
-        } else if (i <= N && j <= N) {
-            const int im1_j = ix - (N+2);
-            const int ip1_j = ix + (N+2);
-            const int i_jm1 = ix - 1;
-            const int i_jp1 = ix + 1;
-            res[ix] = b[ix] - (N+1)*(N+1)*(4*u[ix] - 1*u[im1_j] - 1*u[ip1_j] - 1*u[i_jm1] - 1*u[i_jp1]);
+        } else if (i <= N[0] && j <= N[1]) {
+            const int im1_j = ix - 1;
+            const int ip1_j = ix + 1;
+            const int i_jm1 = ix - (N[0] + 2);
+            const int i_jp1 = ix + (N[0] + 2);
+            res[ix] = b[ix] - (N[0]+1)*(N[1]+1)*(4*u[ix] - 1*u[im1_j] - 1*u[ip1_j] - 1*u[i_jm1] - 1*u[i_jp1]);
         }
     }
 
     __global__
-    void jacobi_step_neg_laplace(double omega, const double* u0, double* u1, const double* b, unsigned int N) {
+    void jacobi_step_neg_laplace(double omega, const double* u0, double* u1, const double* b, multi_index_t N) {
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (N+2) + j);
+        const int ix (i + j * (N[0] + 2));
 
-        if ((i <= N+1 && j <= N+1) && (i == 0 || j == 0 || i == N+1 || j == N+1)) {
+        if ((i <= N[0]+1 && j <= N[1]+1) && (i == 0 || j == 0 || i == N[0]+1 || j == N[1]+1)) {
             // boundary is known
             u1[ix] = u0[ix];
-        } else if (i <= N && j <= N) {
-            const int im1_j = ix - (N+2);
-            const int ip1_j = ix + (N+2);
-            const int i_jm1 = ix - 1;
-            const int i_jp1 = ix + 1;
-            const float u_ = 0.25 * (b[ix] / ((N+1)*(N+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+        } else if (i <= N[0] && j <= N[1]) {
+            const int im1_j = ix - 1;
+            const int ip1_j = ix + 1;
+            const int i_jm1 = ix - (N[0] + 2);
+            const int i_jp1 = ix + (N[0] + 2);
+            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
 
     // treads: N*N, one thread per per inner grid point
     __global__
-    void jacobi_step_neg_laplace_inner(double omega, const double* u0, double* u1, const double* b, unsigned int N) {
+    void jacobi_step_neg_laplace_inner(double omega, const double* u0, double* u1, const double* b, multi_index_t N) {
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (N+2) + j);
+        const int ix (i + j * (N[0] + 2));
 
-        if (i <= N && j <= N) {
-            const int im1_j = ix - (N+2);
-            const int ip1_j = ix + (N+2);
-            const int i_jm1 = ix - 1;
-            const int i_jp1 = ix + 1;
-            const float u_ = 0.25 * (b[ix] / ((N+1)*(N+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+        if (i <= N[0] && j <= N[1]) {
+            const int im1_j = ix - 1;
+            const int ip1_j = ix + 1;
+            const int i_jm1 = ix - (N[0] + 2);
+            const int i_jp1 = ix + (N[0] + 2);
+            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
 
     __global__
-    void restrict_fw_2D(const double* v_N, double* v_n, unsigned int N, unsigned int n) {
+    void restrict_fw_2D(const double* v_N, double* v_n, multi_index_t N, multi_index_t n) {
         // big indices for 'N'-Matrices, small indices for 'n'-Matrices
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (n+2) + j);
+        const int ix (i + j * (n[0] + 2));
         const int I (2*i);
         const int J (2*j);
-        const int IX (I * (N+2) + J);
+        const int IX (I + J * (N[0] + 2));
 
         /*
             O . O . O
@@ -181,12 +181,12 @@ namespace cuda {
             O . O . O
         */
 
-        if ((i <= n+1 && j <= n+1) && (i == 0 || j == 0 || i == n+1 || j == n+1)) {
+        if ((i <= n[0]+1 && j <= n[1]+1) && (i == 0 || j == 0 || i == n[0]+1 || j == n[1]+1)) {
             // boundary is known
             v_n[ix] = v_N[IX];
-        } else if (i <= n && j <= n) {
-            const int dI = (N+2);
-            const int dJ = 1;
+        } else if (i <= n[0] && j <= n[1]) {
+            const int dI = 1;
+            const int dJ = N[0]+2;
             v_n[ix] = 1.0/16.0 * (
                 1*v_N[IX-dI-dJ] + 2*v_N[IX-dJ] + 1*v_N[IX+dI-dJ] +
                 2*v_N[IX-dI   ] + 4*v_N[IX   ] + 2*v_N[IX+dI   ] +
@@ -196,14 +196,14 @@ namespace cuda {
     }
 
     __global__
-    void interpolate_2D(const double* v_n, double* v_N, unsigned int n, unsigned int N) {
+    void interpolate_2D(const double* v_n, double* v_N, multi_index_t n, multi_index_t N) {
         // big indices for 'N'-Matrices, small indices for 'n'-Matrices
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (n+2) + j);
+        const int ix (i + j * (N[0] + 2));
         const int I (2*i);
         const int J (2*j);
-        const int IX (I * (N+2) + J);
+        const int IX (I + J * (N[0] + 2));
 
         /*
             O . O . O
@@ -213,23 +213,23 @@ namespace cuda {
             O . O . O
         */
 
-        if ((i <= n+1 && j <= n+1) && (i == 0 || j == 0)) {
+        if ((i <= n[0]+1 && j <= n[1]+1) && (i == 0 || j == 0)) {
             // boundary is known
             // no update assuming that the boundary of v_N is already set
-        } else if (i <= n && j <= n) {
+        } else if (i <= n[0] && j <= n[1]) {
             /* working on patches like this when all '.' are inner points
                 . .
                 . O
             */
-            const int di = (n+2);
-            const int dj = 1;
-            const int dI = (N+2);
-            const int dJ = 1;
+            const int di = 1;
+            const int dj = n[0] + 2;
+            const int dI = 1;
+            const int dJ = N[0] + 2;
             v_N[IX] = v_n[ix];
             v_N[IX - dI] = 0.5 * (v_n[ix - di] + v_n[ix]);
             v_N[IX - dJ] = 0.5 * (v_n[ix - dj] + v_n[ix]);
             v_N[IX - dI - dJ] = 0.25 * (v_n[ix - di] + v_n[ix - dj] + v_n[ix - di - dj] + v_n[ix]);
-        } else if (i <= n+1 && j <= n+1) {
+        } else if (i <= n[0]+1 && j <= n[1]+1) {
             /* working on patches like this when some '.' are bondary points
 
                 . .
@@ -243,13 +243,13 @@ namespace cuda {
                 . O |
                 ----+
             */
-            const int di = (n+2);
-            const int dj = 1;
-            const int dI = (N+2);
-            const int dJ = 1;
+            const int di = 1;
+            const int dj = n[0] + 2;
+            const int dI = 1;
+            const int dJ = N[0] + 2;
             // don't do v_N[IX] = v_n[ix]; as the point is on the border for sure -> no update
-            if (J != N+1) v_N[IX - dI] = 0.5 * (v_n[ix - di] + v_n[ix]);
-            if (I != N+1) v_N[IX - dJ] = 0.5 * (v_n[ix - dj] + v_n[ix]);
+            if (J != N[1]+1) v_N[IX - dI] = 0.5 * (v_n[ix - di] + v_n[ix]);
+            if (I != N[0]+1) v_N[IX - dJ] = 0.5 * (v_n[ix - dj] + v_n[ix]);
             v_N[IX - dI - dJ] = 0.25 * (v_n[ix - di] + v_n[ix - dj] + v_n[ix - di - dj] + v_n[ix]);
         }
 
@@ -258,12 +258,12 @@ namespace cuda {
 
     // treads N*N: one thrad per inner grid point
     __global__
-    void addAssign2Dinner(double* dst, const double* vec, const unsigned  N) {
+    void addAssign2Dinner(double* dst, const double* vec, multi_index_t N) {
         // index 0 is on the border
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i * (N+2) + j);
-        if (i < N+1 && j < N+1) {
+        const int ix (i + j * (N[0] + 2));
+        if (i < N[0]+1 && j < N[1]+1) {
             dst[ix] += vec[ix];
         }
     }
@@ -308,47 +308,47 @@ struct Fn_CUDA_mem {
 
 template<typename T>
 struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
-    static void restrict(unsigned int N, const T* v_N, T* v_n) {
-        const unsigned int n = N/2;
+    static void restrict(multi_index_t N, const T* v_N, T* v_n) {
+        const multi_index_t n = coarsen(N);
         dim3 block(1, 512, 1);
-        dim3 grid((unsigned)ceil((N+2)/(double)block.x), (unsigned)ceil((N+2)/(double)block.y), 1);
+        dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
         cuda::restrict_fw_2D<<<grid, block>>>(v_N, v_n, N, n);
         cuchck_last();
     }
 
-    static void interpolate(unsigned int n, const T* v_n, T* v_N) {
-        const unsigned int N = n*2 + 1;
+    static void interpolate(multi_index_t n, const T* v_n, T* v_N) {
+        const multi_index_t N (n[0]*2 + 1, n[1]*2 + 1);
         dim3 block(1, 512, 1);
-        dim3 grid((unsigned)ceil((N+2)/(double)block.x), (unsigned)ceil((N+2)/(double)block.y), 1);
+        dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
         cuda::interpolate_2D<<<grid, block>>>(v_n, v_N, n, N);
         cuchck_last();
     }
 
-    static void residuum(unsigned int N, const T* u, const T* b, T* res) {
+    static void residuum(multi_index_t N, const T* u, const T* b, T* res) {
         dim3 block(2, 64, 1);
-        dim3 grid((unsigned)ceil((N+2)/(double)block.x), (unsigned)ceil((N+2)/(double)block.y), 1);
+        dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
         cuda::residuum_neg_laplace<<<grid, block>>>(u, b, res, N);
         cuchck_last();
     }
 
-    static double norm(unsigned int N, const T* vec0) {
+    static double norm(multi_index_t N, const T* vec0) {
         return ::norm_cu(vec0, size_N(N));
     }
 
-    static T norm_residuum(unsigned int N, const T* u, const T* b, T* scratch) {
+    static T norm_residuum(multi_index_t N, const T* u, const T* b, T* scratch) {
       residuum(N, u, b, scratch);
       return norm_cu(scratch, size_N(N));
     }
 
     // TODO scratch buffer might be obsolate
-    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, unsigned int N, T* scratch) {
+    static unsigned int _jacobi(unsigned int max_iters, double max_r, double omega, T* u0, T* u1, const T* b, multi_index_t N, T* scratch) {
         // as we copy (only if we have to) the result back to u0, which has its
         // initialized, we can also only interate on the inner points, if
         // we initialize the u1 borders first
 
         dim3 block(1, 512, 1);
-        dim3 grid_all((unsigned)ceil((N+2)/(double)block.x), (unsigned)ceil((N+2)/(double)block.y), 1);
-        dim3 grid_inner((unsigned)ceil(N/(double)block.x), (unsigned)ceil(N/(double)block.y), 1);
+        dim3 grid_all  ((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
+        dim3 grid_inner((unsigned)ceil( N[0]   /(double)block.x), (unsigned)ceil( N[1]   /(double)block.y), 1);
 
         T * const dst = u0;
         unsigned int iters = 1;
@@ -382,25 +382,25 @@ struct Fn_neg_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
         return iters - 1;
     }
 
-    static unsigned int solve(unsigned int max_iters, double max_r, unsigned int N, T* u0, T* u1, const T* b, T* scratch) {
+    static unsigned int solve(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
         return _jacobi(max_iters, max_r, 1.0, u0, u1, b, N, scratch);
     }
 
-    static unsigned int smooth(unsigned int max_iters, double max_r, unsigned int N, T* u0, T* u1, const T* b, T* scratch) {
+    static unsigned int smooth(unsigned int max_iters, double max_r, multi_index_t N, T* u0, T* u1, const T* b, T* scratch) {
         return _jacobi(max_iters, max_r, 4.0/5.0, u0, u1, b, N, scratch);
     }
 
-    static double norm_sub(unsigned int N, const T* vec0, const T* vec1, T* scratch) {
+    static double norm_sub(multi_index_t N, const T* vec0, const T* vec1, T* scratch) {
         dim3 block(1, 512, 1);
-        dim3 grid((unsigned)ceil((N+2)/(double)block.x), (unsigned)ceil((N+2)/(double)block.y), 1);
+        dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
         cuda::sub<<<grid, block>>>(scratch, vec0, vec1, size_N(N));
         cuchck_last();
         return norm_cu(scratch, size_N(N));
     }
 
-    static void add_correction(unsigned int N, T* u, const T* e) {
+    static void add_correction(multi_index_t N, T* u, const T* e) {
         dim3 block(1, 512, 1);
-        dim3 grid((unsigned)ceil(N/(double)block.x), (unsigned)ceil(N/(double)block.y), 1);
+        dim3 grid((unsigned)ceil(N[0]/(double)block.x), (unsigned)ceil(N[1]/(double)block.y), 1);
         cuda::addAssign2Dinner<<<grid, block>>>(u, e, N); //update only inner points
         cuchck_last();
     }
