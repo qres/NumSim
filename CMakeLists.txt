@@ -30,7 +30,8 @@ set (CMAKE_CC_COMPILER "/usr/bin/gcc")
 set (CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 # set some good compiler flags
-set (GOOD_FLAGS "-Wall -Wextra -pedantic -O3 -march=native -std=c++11")
+#set (GOOD_FLAGS "-Wall -Wextra -pedantic -g -O3 -fno-omit-frame-pointer -march=native -std=c++11")
+set (GOOD_FLAGS "-g -std=c++11")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GOOD_FLAGS}")
 
 # debug visu?
@@ -46,6 +47,10 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${SDL2_INCLUDE_DIRS})
 find_package (MPI REQUIRED)
 INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${MPI_INCLUDE_PATH})
 
+find_package(CUDA QUIET REQUIRED)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
+list(APPEND CUDA_NVCC_FLAGS "-g -O3 --std=c++11")
+
 # Using glob is discouraged in cmake.
 set (HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/communicator.hpp
@@ -56,7 +61,7 @@ set (HEADERS
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parameter.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/typedef.hpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/vtk.hpp
+  #${CMAKE_CURRENT_SOURCE_DIR}/src/vtk.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/particle.hpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/falggrid.hpp
   )
@@ -70,9 +75,10 @@ set (SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/src/iterator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/parameter.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/solver.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/vtk.cpp
+  #${CMAKE_CURRENT_SOURCE_DIR}/src/vtk.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/particle.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/flaggrid.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/mg_impl.cu
   )
 
 # add header and source of visu if it shall be built
@@ -92,8 +98,8 @@ if (DEBUG_VISU)
 endif (DEBUG_VISU)
 
 # build executable and link libs against it
-add_executable (numsim ${SOURCES})
-target_link_libraries (numsim ${SDL2_LIBRARIES} ${MPI_LIBRARIES})
+cuda_add_executable(numsim ${SOURCES})
+target_link_libraries (numsim ${SDL2_LIBRARIES} ${MPI_LIBRARIES} cuda)
 
 if (MPI_COMPILE_FLAGS)
   set_target_properties(numsim PROPERTIES
