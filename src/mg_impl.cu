@@ -128,7 +128,9 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            res[ix] = b[ix] - (N[0]+1)*(N[1]+1)/length[0]/length[1]*(4*u[ix] - 1*u[im1_j] - 1*u[ip1_j] - 1*u[i_jm1] - 1*u[i_jp1]);
+            const T hx = 1.0/(N[0]+1)*length[0];
+            const T hy = 1.0/(N[1]+1)*length[1];
+            res[ix] = b[ix] - (u[im1_j] - 2*u[ix] +  u[ip1_j]) / hx/hx -  (u[i_jm1] - 2*u[ix] + u[i_jp1]) / hy/hy;
         }
     }
 
@@ -147,7 +149,16 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) * length[0] * length[1] + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+            const T hx = 1.0/(N[0]+1)*length[0];
+            const T hy = 1.0/(N[1]+1)*length[1];
+            const T hxsq = hx*hx;
+            const T hysq = hy*hy;
+
+            const float u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
+                (u0[im1_j] + u0[ip1_j]) / hxsq +
+                (u0[i_jm1] + u0[i_jp1]) / hysq +
+                - b[ix]
+            );
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
@@ -165,7 +176,16 @@ namespace cuda {
             const int ip1_j = ix + 1;
             const int i_jm1 = ix - (N[0] + 2);
             const int i_jp1 = ix + (N[0] + 2);
-            const float u_ = 0.25 * (b[ix] / ((N[0]+1)*(N[1]+1)) * length[0] * length[1] + u0[im1_j] + u0[ip1_j] + u0[i_jm1] + u0[i_jp1]);
+            const T hx = 1.0/(N[0]+1)*length[0];
+            const T hy = 1.0/(N[1]+1)*length[1];
+            const T hxsq = hx*hx;
+            const T hysq = hy*hy;
+
+            const float u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
+                (u0[im1_j] + u0[ip1_j]) / hxsq +
+                (u0[i_jm1] + u0[i_jp1]) / hysq +
+                - b[ix]
+            );
             u1[ix] = (1-omega) * u0[ix] + omega * u_;
         }
     }
