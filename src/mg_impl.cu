@@ -1,4 +1,5 @@
 #include "grid_size.hpp"
+#include "flaggrid.hpp"
 
 #include <iostream>
 
@@ -151,7 +152,7 @@ namespace cuda {
             const T hxsq = hx*hx;
             const T hysq = hy*hy;
 
-            const float u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
+            const T u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
                 (u0[im1_j] + u0[ip1_j]) / hxsq +
                 (u0[i_jm1] + u0[i_jp1]) / hysq +
                 - b[ix]
@@ -178,7 +179,7 @@ namespace cuda {
             const T hxsq = hx*hx;
             const T hysq = hy*hy;
 
-            const float u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
+            const T u_ = 0.5 * (hxsq*hysq) / (hxsq+hysq) * (
                 (u0[im1_j] + u0[ip1_j]) / hxsq +
                 (u0[i_jm1] + u0[i_jp1]) / hysq +
                 - b[ix]
@@ -290,7 +291,7 @@ namespace cuda {
         const int i (1 + threadIdx.x + blockIdx.x * blockDim.x);
         const int j (1 + threadIdx.y + blockIdx.y * blockDim.y);
         const int ix (i + j * (N[0] + 2));
-        if (i < N[0]+1 && j < N[1]+1) {
+        if (i <= N[0] && j <= N[1]) {
             dst[ix] += vec[ix];
         }
     }
@@ -338,7 +339,7 @@ struct Fn_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
     static void restrict(multi_index_t N, const T* v_N, T* v_n) {
         const multi_index_t n = coarsen(N);
         dim3 block(1, 512, 1);
-        dim3 grid((unsigned)ceil((N[0]+2)/(double)block.x), (unsigned)ceil((N[1]+2)/(double)block.y), 1);
+        dim3 grid((unsigned)ceil((n[0]+2)/(double)block.x), (unsigned)ceil((n[1]+2)/(double)block.y), 1);
         cuda::restrict_fw_2D<<<grid, block>>>(v_N, v_n, N, n);
         cuchck_last();
     }

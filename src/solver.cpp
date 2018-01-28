@@ -350,8 +350,7 @@ MultiGrid::~MultiGrid() {
 #ifdef single_buffer
     F::free_typed(buffer);
 #else
-    N_i = N_fine;
-    for (unsigned int i = 0; i < _cfg->num_levels; ++i, N_i = N_i/2) {
+    for (unsigned int i = 0; i < _cfg->num_levels; ++i) {
         if (i!=0 || !F::mem_device_host_equal()) {
             F::free_typed(u0[i]);
             F::free_typed(b[i]);
@@ -396,13 +395,14 @@ MultiGrid::~MultiGrid() {
 
 real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
     InteriorIterator it(this->_geom);
+    unsigned int cycles;
 
     #ifdef USE_CUDA
         typedef Fn_laplace_cuda<real_t> F_CUDA;
         unsigned int size_N = F_CUDA::size_N(this->_geom->Size());
         F_CUDA::memcpy_typed_HostToDevice(this->d_u0_f64, p->Data(),   size_N);
-        F_CUDA::memcpy_typed_HostToDevice(this->d_b_f64, rhs->Data(), size_N);
-        solve_mg_flat<F_CUDA>(this->d_u0_f64, this->d_b_f64);
+        F_CUDA::memcpy_typed_HostToDevice(this->d_b_f64,  rhs->Data(), size_N);
+        cycles = solve_mg_flat<F_CUDA>(this->d_u0_f64, this->d_b_f64);
         F_CUDA::memcpy_typed_DeviceToHost(p->Data(), this->d_u0_f64, size_N);
     #else
         #ifdef MIXED_PRECISION
@@ -416,7 +416,7 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
             unsigned int size_N = Fn_laplace<real_t>::size_N(this->_geom->Size());
             std::fill_n(err_f32, size_N, 0.0);
             // solve for f32 error
-            solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
+            cycles = solve_mg_flat<Fn_laplace<solver_real_t>>(err_f32, res_f32);
 
             for(it.First(); it.Valid(); it.Next()) {
                 if (p->getGeometry()->Flags().Cell(it) == Flags::Fluid) {
@@ -424,7 +424,7 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
                 }
             }
         #else
-            solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
+            cycles = solve_mg_flat<Fn_laplace<real_t>>(p->Data(), rhs->Data());
         #endif
     #endif
 
@@ -440,6 +440,8 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
     }
     res /= count;
     res = sqrt(res);
+
+    std::cout << "Cycles " << cycles << " " << res << " ";
 
     return res;
 }

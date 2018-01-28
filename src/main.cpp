@@ -21,8 +21,8 @@
 #include "compute.hpp"
 #include "geometry.hpp"
 #include "parameter.hpp"
-#include "visu.hpp"
-#include "vtk.hpp"
+//#include "visu.hpp"
+//#include "vtk.hpp"
 #include "particle.hpp"
 
 #include <iostream>
@@ -30,8 +30,8 @@
 
 #include <fenv.h>
 
-//#undef USE_DEBUG_VISU
-//#define NO_VTK
+#undef USE_DEBUG_VISU
+#define NO_VTK
 
 int main(int argc, char **argv) {
   // we want floating point exeptions

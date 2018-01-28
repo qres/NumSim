@@ -355,11 +355,12 @@ multi_index_t restrict_flags_2D(multi_index_t N, const char* v_N, char* v_n) {
  * n : number of inner values of the coarse grid [boundary, val, val boundary] => N = 2
  */
 template<typename T>
-multi_index_t interpolate_2D(multi_index_t n, const T* v_n, T* v_N, const char* mask_n) {
+multi_index_t interpolate_2D(multi_index_t n, const T* v_n, T* v_N, const char* mask_n) { // TODO maskN
     const multi_index_t N (n[0]*2 + 1, n[1]*2 + 1);
     #define _v_n(i,j) (get_matrix(v_n,i,j,n))
     #define _v_N(i,j) (get_matrix(v_N,i,j,N))
-    #define _fluid(i,j) (get_matrix(mask_n,i,j,n) == Flags::Fluid)
+    //#define _fluid(i,j) (get_matrix(mask_n,i,j,n) == Flags::Fluid)
+    #define _Fluid(i,j) (get_matrix(mask_n,i,j,N) == Flags::Fluid)
     // keep boundary condition
     // interpolate
     /*
@@ -369,18 +370,18 @@ multi_index_t interpolate_2D(multi_index_t n, const T* v_n, T* v_N, const char* 
     0 0 0 0 0 0 0
     x 0 x 0 x 0 x
     */
-    for (unsigned int j(1); j<=n[1]+1; ++j) {
-        for (unsigned int i(1); i<=n[0]+1; ++i) {
-            if (!_fluid(i,j)) continue;
-            if (2*i != N[0]+1 && 2*j != N[1]+1) _v_N(2*i,     2*j    ) = _v_n(i,j);
-            if (2*j != N[1]+1 && _fluid(i-1,j)) _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
-            if (2*i != N[0]+1 && _fluid(i,j-1)) _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
-            if (_fluid(i-1,j-1) && _fluid(i,j-1) && _fluid(i-1,j)) _v_N(2*i - 1, 2*j - 1) = 0.25 * (_v_n(i-1,j) + _v_n(i,j-1) + _v_n(i-1,j-1) + _v_n(i,j));
+    for (unsigned int j(1); j<=n[1]+1; ++j) { // TODO <=? does not make any diffreence for dricen cavity
+        for (unsigned int i(1); i<=n[0]+1; ++i) { // TODO <=? does not make any diffreence for dricen cavity
+            //if (!_fluid(i,j)) continue;
+            if (2*i != N[0]+1 && 2*j != N[1]+1 && _Fluid(2*i,2*j)) _v_N(2*i,     2*j    ) = _v_n(i,j);
+            if (2*j != N[1]+1 && _Fluid(2*i-1,2*j))                _v_N(2*i - 1, 2*j    ) = 0.5 * (_v_n(i-1,j) + _v_n(i,j));
+            if (2*i != N[0]+1 && _Fluid(2*i,2*j-1))                _v_N(2*i,     2*j - 1) = 0.5 * (_v_n(i,j-1) + _v_n(i,j));
+            if (_Fluid(2*i-1,2*j-1))                               _v_N(2*i - 1, 2*j - 1) = 0.25 * (_v_n(i-1,j) + _v_n(i,j-1) + _v_n(i-1,j-1) + _v_n(i,j));
         }
     }
 
     return N;
-    #undef _fluid
+    #undef _Fluid
     #undef _v_n
     #undef _v_N
 }
@@ -519,7 +520,7 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
         } else if (next == SWEEP_UP) {
             // up-sweep
             current_level--;
-            F::interpolate(N[current_level+1], u0[current_level+1], e_0[current_level], flags[current_level+1]);
+            F::interpolate(N[current_level+1], u0[current_level+1], e_0[current_level], flags[current_level]);
             F::add_correction(N[current_level], u0[current_level], e_0[current_level], flags[current_level]);
             if(verbose_levels) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << "/" << std::endl;}
 
@@ -531,7 +532,7 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
                 length,
                 u0[current_level], scratch, b[current_level],
                 flags[current_level],
-                res1[current_level]); //scratch: will be overwritten soon
+                res0[current_level]); //scratch: will be overwritten soon
 
             std::swap(res0[current_level], res1[current_level]);
             F::residuum(N[current_level], length, u0[current_level], b[current_level], flags[current_level], res1[current_level]);
@@ -540,14 +541,15 @@ unsigned int MultiGrid::solve_mg_flat(T* _u0, const T* _b) const {
             r[current_level] = F::norm(N[current_level], res1[current_level]);
             if(verbose) {for (unsigned int i = 0; i < current_level; ++i) std::cout << " "; std::cout << std::scientific << r[current_level] << std::endl;}
 
-            T res_diff = F::norm_sub(N[current_level], res0[current_level], res1[current_level], scratch);
-            if (res_diff < _cfg->levels[0].max_res/pow(10,current_level)  || res_diff/ r_old[current_level] < _cfg->levels[0].max_res/pow(10,current_level)) {
-                if (verbose) {
-                    for (unsigned int i = 0; i < current_level; ++i) std::cout << " ";
-                    std::cout << (res_diff < 1e-12 ? "" : "res_diff | ") << (res_diff/r_old[current_level] < 1e-12 ? "" : "res_diff_rel") << std::endl;
-                }
-                r[current_level] = 0; //break current level interation
-            }
+            //T res_diff = F::norm_sub(N[current_level], res0[current_level], res1[current_level], scratch);
+            //if (res_diff < _cfg->levels[0].max_res/pow(10,current_level)  || res_diff/ r_old[current_level] < _cfg->levels[0].max_res/pow(10,current_level)) {
+            //if (res_diff < _cfg->levels[0].max_res) {
+            //    if (verbose) {
+            //        for (unsigned int i = 0; i < current_level; ++i) std::cout << " ";
+            //        std::cout << (res_diff < 1e-12 ? "" : "res_diff | ") << (res_diff/r_old[current_level] < 1e-12 ? "" : "res_diff_rel") << std::endl;
+            //    }
+            //    r[current_level] = 0; //break current level interation
+            //}
 
             continue;
         } else {
