@@ -39,9 +39,9 @@ option (DEBUG_VISU
   "Enable debugging visualization" ON)
 
 # find sdl 2
-INCLUDE(FindPkgConfig)
-PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
-INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${SDL2_INCLUDE_DIRS})
+#INCLUDE(FindPkgConfig)
+#PKG_SEARCH_MODULE(SDL2 REQUIRED sdl2)
+#INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${SDL2_INCLUDE_DIRS})
 
 # find mpi
 find_package (MPI REQUIRED)
@@ -49,7 +49,7 @@ INCLUDE_DIRECTORIES(${INCLUDE_DIRECTORIES} ${MPI_INCLUDE_PATH})
 
 find_package(CUDA QUIET REQUIRED)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS})
-list(APPEND CUDA_NVCC_FLAGS "-g -O3 --std=c++11")
+list(APPEND CUDA_NVCC_FLAGS "-g -O3")
 
 # Using glob is discouraged in cmake.
 set (HEADERS
@@ -83,19 +83,19 @@ set (SOURCES
 
 # add header and source of visu if it shall be built
 # additionally set a flag
-if (DEBUG_VISU)
-  set (HEADERS
-    ${HEADERS}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/visu.hpp
-    )
-
-  set (SOURCES
-    ${SOURCES}
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/visu.cpp
-    )
-
-  add_definitions(-DUSE_DEBUG_VISU)
-endif (DEBUG_VISU)
+#if (DEBUG_VISU)
+#  set (HEADERS
+#    ${HEADERS}
+#    ${CMAKE_CURRENT_SOURCE_DIR}/src/visu.hpp
+#    )
+#
+#  set (SOURCES
+#    ${SOURCES}
+#    ${CMAKE_CURRENT_SOURCE_DIR}/src/visu.cpp
+#    )
+#
+#  add_definitions(-DUSE_DEBUG_VISU)
+#endif (DEBUG_VISU)
 
 # build executable and link libs against it
 cuda_add_executable(numsim ${SOURCES})
