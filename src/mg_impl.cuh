@@ -1,4 +1,34 @@
+#ifndef MG_IMP_CUH
+#define MG_IMP_CUH
+
 #include "grid_size.hpp"
+#include "cuda.h"
+#include "cuda_runtime.h"
+
+void print_cuda_stats() {
+    cudaDeviceProp prop;
+    cudaError_t status = cudaGetDeviceProperties (&prop, 0); //device 0
+
+    std::cout << "Device name           : " << prop.name << std::endl;
+    std::cout << "Compute capability    : " << prop.major << "." << prop.minor << std::endl;
+    std::cout << "Warp size             : " << prop.warpSize << std::endl;
+    std::cout << "Max threads per core  : " << prop.maxThreadsPerMultiProcessor << std::endl;
+    std::cout << "Max threads per block : " << prop.maxThreadsPerBlock << std::endl;
+    std::cout << "Max block dimensions  : " << prop.maxThreadsDim[0] << "x" << prop.maxThreadsDim[1] << "x"<< prop.maxThreadsDim[2] << std::endl;
+    std::cout << "Max grid dimensions   : " << prop.maxGridSize[0] << "x" << prop.maxGridSize[1] << "x"<< prop.maxGridSize[2] << std::endl;
+    std::cout << "Overlap copy & execute: " << prop.deviceOverlap << std::endl;
+    std::cout << std::endl;
+}
+
+void init_cuda() {
+    auto result = cuInit(0);
+    if (result != cudaSuccess) {
+        std::cout << "FAILED to init cuda (" << result << ")" << std::endl;
+        exit(1);
+    }
+    print_cuda_stats();
+}
+
 
 template<typename T>
 struct Fn_CUDA_mem {
@@ -27,3 +57,5 @@ struct Fn_laplace_cuda : Fn_CUDA_mem<T>, Grid2D {
     static double norm_sub(multi_index_t N, const T* vec0, const T* vec1, T* scratch);
     static void add_correction(multi_index_t N, T* u, const T* e, const char* mask);
 };
+
+#endif

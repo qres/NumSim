@@ -5,7 +5,7 @@
 void checkForErrors(const cudaError_t status, const char *label, const int line, const char *file)
 {
     if (status != cudaSuccess) {
-        std::cerr << "CUDA ERROR (" << label << ") ";
+        std::cerr << "CUDA ERROR " << status << " (" << label << ") ";
         std::cerr << "at " << file << ":" << line << std::endl;
         std::cerr << cudaGetErrorString(status) << ". Exiting..." << std::endl;
         exit(1);
@@ -22,22 +22,19 @@ void checkForErrors(const cudaError_t status, const char *label, const int line,
     #define cuchck_last()
 #endif
 
-float normoo_cu(const float* vec, unsigned int count) {
+template<typename T>
+T normoo_cu(const T* vec, unsigned int count) {
+    T* t = new T[count];
+    cudaMemcpy(t, vec, count * sizeof(T), cudaMemcpyDeviceToHost);
+    T norm = 0;
+    // only inner values as boundary is given
+    for (unsigned int i(0); i < count; ++i) {
+        T entry = t[i];
+        norm = max(norm,abs(entry));
+    }
+    delete[] t;
     // TODO
-    return abs(1);
-}
-
-double normoo_cu(const double* vec, unsigned int count) {
-    // TODO
-    return abs(1);
-}
-
-float norm2_cu(const float* vec, unsigned int count) {
-    return 1; // TODO
-}
-
-double norm2_cu(const double* vec, unsigned int count) {
-    return 1; // TODO
+    return norm;
 }
 
 template<typename T>
@@ -229,7 +226,7 @@ namespace cuda {
         // big indices for 'N'-Matrices, small indices for 'n'-Matrices
         const int i (threadIdx.x + blockIdx.x * blockDim.x);
         const int j (threadIdx.y + blockIdx.y * blockDim.y);
-        const int ix (i + j * (N[0] + 2));
+        const int ix (i + j * (n[0] + 2));
         const int I (2*i);
         const int J (2*j);
         const int IX (I + J * (N[0] + 2));

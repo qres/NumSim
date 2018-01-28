@@ -232,10 +232,16 @@ Cfg Cfg::jacobi(unsigned int max_iters, double max_res) {
 }
 
 MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
-    typedef Fn_laplace<solver_real_t> F;
-    typedef Fn_laplace<real_t> F_f64;
+    #ifdef USE_CUDA
+        init_cuda();
+    #endif
+
+    #ifdef USE_CUDA
+        typedef Fn_laplace_cuda<solver_real_t> F;
+    #else
+        typedef Fn_laplace<solver_real_t> F;
+    #endif
     typedef Fn_laplace<char> FLAGS;
-    typedef Fn_laplace_cuda<char> F_CUDA;
 
     multi_index_t N_fine = this->_geom->Size();
     multi_index_t N_i;
@@ -327,14 +333,19 @@ MultiGrid::MultiGrid(const Geometry* geom, const Cfg* cfg) : Solver(geom) {
     }
 
 #ifdef USE_CUDA
-    this->d_u0_f64 = F_f64::malloc_typed(F_f64::size_N(N_fine));
-    this->d_b_f64 = F_f64::malloc_typed(F_f64::size_N(N_fine));
+    typedef Fn_laplace_cuda<real_t> F_CUDA_F64;
+    this->d_u0_f64 = F_CUDA_F64::malloc_typed(F_CUDA_F64::size_N(N_fine));
+    this->d_b_f64 = F_CUDA_F64::malloc_typed(F_CUDA_F64::size_N(N_fine));
 #endif
 }
 
 MultiGrid::~MultiGrid() {
-    typedef Fn_laplace<solver_real_t> F;
-    typedef Fn_laplace_cuda<real_t> F_CUDA_F64;
+    #ifdef USE_CUDA
+        typedef Fn_laplace_cuda<solver_real_t> F;
+        typedef Fn_laplace_cuda<real_t> F_CUDA_F64;
+    #else
+        typedef Fn_laplace<solver_real_t> F;
+    #endif
 
 #ifdef single_buffer
     F::free_typed(buffer);
@@ -392,6 +403,7 @@ real_t MultiGrid::Cycle(Grid *p, const Grid *rhs) const {
         F_CUDA::memcpy_typed_HostToDevice(this->d_u0_f64, p->Data(),   size_N);
         F_CUDA::memcpy_typed_HostToDevice(this->d_b_f64, rhs->Data(), size_N);
         solve_mg_flat<F_CUDA>(this->d_u0_f64, this->d_b_f64);
+        F_CUDA::memcpy_typed_DeviceToHost(p->Data(), this->d_u0_f64, size_N);
     #else
         #ifdef MIXED_PRECISION
             // compute f32 residual
